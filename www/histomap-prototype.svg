@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="2400" viewBox="0 0 1200 2400">
+<style>text{font-family: Arial, Helvetica, sans-serif; font-size:12px; fill:#111} .label{font-weight:700}</style>
+<rect x="0" y="0" width="1200" height="2400" fill="#fff"/>
+<line x1="200" x2="200" y1="40" y2="2360" stroke="#333" stroke-width="2"/>
+<line x1="190" x2="210" y1="70.51144666341938" y2="70.51144666341938" stroke="#666"/>
+<text x="180" y="74.51144666341938" text-anchor="end">0 BC</text>
+<line x1="190" x2="210" y1="296.52216268874815" y2="296.52216268874815" stroke="#666"/>
+<text x="180" y="300.52216268874815" text-anchor="end">200</text>
+<line x1="190" x2="210" y1="522.532878714077" y2="522.532878714077" stroke="#666"/>
+<text x="180" y="526.532878714077" text-anchor="end">400</text>
+<line x1="190" x2="210" y1="748.5435947394058" y2="748.5435947394058" stroke="#666"/>
+<text x="180" y="752.5435947394058" text-anchor="end">600</text>
+<line x1="190" x2="210" y1="974.5543107647345" y2="974.5543107647345" stroke="#666"/>
+<text x="180" y="978.5543107647345" text-anchor="end">800</text>
+<line x1="190" x2="210" y1="1200.5650267900633" y2="1200.5650267900633" stroke="#666"/>
+<text x="180" y="1204.5650267900633" text-anchor="end">1000</text>
+<line x1="190" x2="210" y1="1426.5757428153922" y2="1426.5757428153922" stroke="#666"/>
+<text x="180" y="1430.5757428153922" text-anchor="end">1200</text>
+<line x1="190" x2="210" y1="1652.586458840721" y2="1652.586458840721" stroke="#666"/>
+<text x="180" y="1656.586458840721" text-anchor="end">1400</text>
+<line x1="190" x2="210" y1="1878.5971748660497" y2="1878.5971748660497" stroke="#666"/>
+<text x="180" y="1882.5971748660497" text-anchor="end">1600</text>
+<line x1="190" x2="210" y1="2104.6078908913787" y2="2104.6078908913787" stroke="#666"/>
+<text x="180" y="2108.6078908913787" text-anchor="end">1800</text>
+<line x1="190" x2="210" y1="2330.618606916707" y2="2330.618606916707" stroke="#666"/>
+<text x="180" y="2334.618606916707" text-anchor="end">2000</text>
+<rect x="220" y="40" width="960" height="566.4169508037019" rx="6" ry="6" fill="#1f77b4" fill-opacity="0.9" stroke="#333"/>
+<text x="228" y="54" class="label">Roman Empire (Western)</text>
+<text x="240" y="56" font-size="11">• Augustus (Octavian)</text>
+<rect x="226" y="443.42912810521193" width="948" height="1267.0501704822211" rx="6" ry="6" fill="#ff7f0e" fill-opacity="0.9" stroke="#333"/>
+<text x="234" y="457.42912810521193" class="label">Byzantine Empire</text>
+<text x="246" y="682.0496833901607" font-size="11">• Justinian I</text>
+<text x="246" y="1303.1485630784218" font-size="11">• William I (the Conqueror)</text>
+<text x="246" y="978.3925962006819" font-size="11">• Charlemagne</text>
+<rect x="232" y="1118.0711154408184" width="936" height="879.4417924987822" rx="6" ry="6" fill="#2ca02c" fill-opacity="0.9" stroke="#333"/>
+<text x="240" y="1132.0711154408184" class="label">Kingdom of England</text>
+<text x="252" y="1291.1485630784218" font-size="11">• William I (the Conqueror)</text>
+<text x="252" y="1955.1894788114953" font-size="11">• Louis XIV</text>
+<text x="252" y="1776.2104237700926" font-size="11">• Isabella I of Castile</text>
+<rect x="238" y="1023.1466147101802" width="924" height="1070.4208475401852" rx="6" ry="6" fill="#d62728" fill-opacity="0.9" stroke="#333"/>
+<text x="246" y="1037.14661471018" class="label">Kingdom of France</text>
+<text x="258" y="1291.1485630784218" font-size="11">• William I (the Conqueror)</text>
+<text x="258" y="1955.1894788114953" font-size="11">• Louis XIV</text>
+<text x="258" y="1776.2104237700926" font-size="11">• Isabella I of Castile</text>
+<rect x="244" y="974.5543107647345" width="912" height="1134.8339016074037" rx="6" ry="6" fill="#9467bd" fill-opacity="0.9" stroke="#333"/>
+<text x="252" y="988.5543107647345" class="label">Holy Roman Empire</text>
+<text x="264" y="1291.1485630784218" font-size="11">• William I (the Conqueror)</text>
+<text x="264" y="966.3925962006819" font-size="11">• Charlemagne</text>
+<text x="264" y="1967.1894788114953" font-size="11">• Louis XIV</text>
+<rect x="250" y="1460.4773502191915" width="900" height="546.0759863614223" rx="6" ry="6" fill="#8c564b" fill-opacity="0.9" stroke="#333"/>
+<text x="258" y="1474.4773502191915" class="label">Crown of Castile</text>
+<text x="270" y="1943.1894788114953" font-size="11">• Louis XIV</text>
+<text x="270" y="1764.2104237700926" font-size="11">• Isabella I of Castile</text>
+<g transform="translate(1020,40)">
+<text x="0" y="0" class="label">Region colours</text>
+<rect x="0" y="8" width="14" height="14" fill="#1f77b4" stroke="#333"/>
+<text x="20" y="20" font-size="12">Italy</text>
+<rect x="0" y="26" width="14" height="14" fill="#ff7f0e" stroke="#333"/>
+<text x="20" y="38" font-size="12">Balkans</text>
+<rect x="0" y="44" width="14" height="14" fill="#2ca02c" stroke="#333"/>
+<text x="20" y="56" font-size="12">Britain</text>
+<rect x="0" y="62" width="14" height="14" fill="#d62728" stroke="#333"/>
+<text x="20" y="74" font-size="12">Western Europe</text>
+<rect x="0" y="80" width="14" height="14" fill="#9467bd" stroke="#333"/>
+<text x="20" y="92" font-size="12">Central Europe</text>
+<rect x="0" y="98" width="14" height="14" fill="#8c564b" stroke="#333"/>
+<text x="20" y="110" font-size="12">Iberia</text>
+</g>
+</svg>
