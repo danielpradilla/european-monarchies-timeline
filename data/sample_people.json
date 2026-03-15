@@ -31,5 +31,38 @@
     "dynasty": "House of Normandy",
     "notes": "Conquered England in 1066",
     "source": "https://en.wikipedia.org/wiki/William_I_of_England"
+  },
+  {
+    "id": "charlemagne",
+    "name": "Charlemagne",
+    "birth_year": 742,
+    "death_year": 814,
+    "reign_start": 768,
+    "reign_end": 814,
+    "dynasty": "Carolingian",
+    "notes": "King of the Franks; crowned Emperor in 800",
+    "source": "https://en.wikipedia.org/wiki/Charlemagne"
+  },
+  {
+    "id": "louis-xiv",
+    "name": "Louis XIV",
+    "birth_year": 1638,
+    "death_year": 1715,
+    "reign_start": 1643,
+    "reign_end": 1715,
+    "dynasty": "Bourbon",
+    "notes": "The Sun King, absolutist monarch of France",
+    "source": "https://en.wikipedia.org/wiki/Louis_XIV_of_France"
+  },
+  {
+    "id": "isabella-i",
+    "name": "Isabella I of Castile",
+    "birth_year": 1451,
+    "death_year": 1504,
+    "reign_start": 1474,
+    "reign_end": 1504,
+    "dynasty": "Trastámara",
+    "notes": "Unified Spain with Ferdinand; sponsored Columbus",
+    "source": "https://en.wikipedia.org/wiki/Isabella_I_of_Castile"
   }
 ]

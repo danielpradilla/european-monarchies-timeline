@@ -31,5 +31,38 @@
     "dynasties": ["House of Wessex", "House of Normandy"],
     "region": ["Britain"],
     "in_scope": true
+  },
+  {
+    "id": "kingdom-france",
+    "name": "Kingdom of France",
+    "start_year": 843,
+    "end_year": 1792,
+    "founding_event": "Treaty of Verdun (843)",
+    "end_event": "French Revolution / First Republic (1792)",
+    "dynasties": ["Capetian", "Valois", "Bourbon"],
+    "region": ["Western Europe"],
+    "in_scope": true
+  },
+  {
+    "id": "holy-roman-empire",
+    "name": "Holy Roman Empire",
+    "start_year": 800,
+    "end_year": 1806,
+    "founding_event": "Charlemagne crowned Emperor (800)",
+    "end_event": "Dissolution under Francis II (1806)",
+    "dynasties": ["Carolingian", "Hohenstaufen", "Habsburg"],
+    "region": ["Central Europe"],
+    "in_scope": true
+  },
+  {
+    "id": "crown-of-castile",
+    "name": "Crown of Castile",
+    "start_year": 1230,
+    "end_year": 1715,
+    "founding_event": "Union of León and Castile (1230)",
+    "end_event": "Bourbon centralization reforms (early 18th century)",
+    "dynasties": ["Bourbon", "Trastámara"],
+    "region": ["Iberia"],
+    "in_scope": true
   }
 ]
