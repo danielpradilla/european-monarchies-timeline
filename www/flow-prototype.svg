@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="2000" viewBox="0 0 1200 2000">
+  <style>text{font-family:Georgia, 'Times New Roman', serif; fill:#111} .label{font-weight:700; font-size:14px}</style>
+  <rect x="0" y="0" width="1200" height="2000" fill="#fff"/>
+  <!-- columns -->
+  <g transform="translate(140,40)">
+    <!-- vertical axis line -->
+    <line x1="0" x2="0" y1="0" y2="1860" stroke="#333" stroke-width="2"/>
+
+    <!-- stylized flows: each flow is a path group with splittings -->
+    <!-- Roman -> Byzantine split -->
+    <path d="M40,20 C200,120 200,200 40,300 L120,300 C260,200 260,120 120,20 Z" fill="#1f77b4" opacity="0.95" stroke="#222"/>
+    <path d="M120,300 C200,360 200,720 120,780 L200,780 C280,720 280,360 200,300 Z" fill="#ff7f0e" opacity="0.95" stroke="#222"/>
+
+    <!-- Britain flow -->
+    <g transform="translate(260,0)">
+      <path d="M40,600 C200,660 200,920 40,980 L120,980 C260,920 260,660 120,600 Z" fill="#2ca02c" opacity="0.95" stroke="#222"/>
+      <text x="20" y="580" class="label">Kingdom of England</text>
+    </g>
+
+    <!-- France flow -->
+    <g transform="translate(460,0)">
+      <path d="M40,420 C200,480 200,860 40,920 L120,920 C260,860 260,480 120,420 Z" fill="#d62728" opacity="0.95" stroke="#222"/>
+      <text x="20" y="400" class="label">Kingdom of France</text>
+    </g>
+
+    <!-- Holy Roman flow (branch off Carolingian) -->
+    <g transform="translate(660,0)">
+      <path d="M40,240 C200,300 200,760 40,820 L120,820 C260,760 260,300 120,240 Z" fill="#9467bd" opacity="0.95" stroke="#222"/>
+      <text x="20" y="220" class="label">Holy Roman Empire</text>
+    </g>
+
+    <!-- Iberia flow -->
+    <g transform="translate(860,0)">
+      <path d="M40,1080 C200,1140 200,1500 40,1560 L120,1560 C260,1500 260,1140 120,1080 Z" fill="#8c564b" opacity="0.95" stroke="#222"/>
+      <text x="20" y="1060" class="label">Crown of Castile</text>
+    </g>
+
+    <!-- legends -->
+    <g transform="translate(980,40)">
+      <text class="label">Legend</text>
+      <g transform="translate(0,20)">
+        <rect x="0" y="8" width="18" height="12" fill="#1f77b4" stroke="#333"/>
+        <text x="26" y="18">Roman Empire (Western)</text>
+      </g>
+      <g transform="translate(0,40)">
+        <rect x="0" y="8" width="18" height="12" fill="#ff7f0e" stroke="#333"/>
+        <text x="26" y="18">Byzantine Empire</text>
+      </g>
+      <g transform="translate(0,60)">
+        <rect x="0" y="8" width="18" height="12" fill="#2ca02c" stroke="#333"/>
+        <text x="26" y="18">Kingdom of England</text>
+      </g>
+    </g>
+
+  </g>
+</svg>
