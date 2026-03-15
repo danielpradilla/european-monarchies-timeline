@@ -1,55 +1,80 @@
 <?xml version="1.0" encoding="utf-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="2000" viewBox="0 0 1200 2000">
-  <style>text{font-family:Georgia, 'Times New Roman', serif; fill:#111} .label{font-weight:700; font-size:14px}</style>
-  <rect x="0" y="0" width="1200" height="2000" fill="#fff"/>
-  <!-- columns -->
-  <g transform="translate(140,40)">
-    <!-- vertical axis line -->
-    <line x1="0" x2="0" y1="0" y2="1860" stroke="#333" stroke-width="2"/>
+  <defs>
+    <linearGradient id="g1" x1="0" x2="1">
+      <stop offset="0%" stop-color="#1f77b4" stop-opacity="0.98"/>
+      <stop offset="100%" stop-color="#6ea7e6" stop-opacity="0.98"/>
+    </linearGradient>
+    <linearGradient id="g2" x1="0" x2="1">
+      <stop offset="0%" stop-color="#ff7f0e" stop-opacity="0.98"/>
+      <stop offset="100%" stop-color="#ffb07a" stop-opacity="0.98"/>
+    </linearGradient>
+  </defs>
+  <style>
+    text{font-family: 'Source Sans Pro', Arial, sans-serif; fill:#222}
+    .title{font-weight:700; font-size:20px}
+    .label{font-weight:600; font-size:13px}
+    .small{font-size:11px; fill:#333}
+  </style>
+  <rect x="0" y="0" width="1200" height="2000" fill="#fbfbfb"/>
 
-    <!-- stylized flows: each flow is a path group with splittings -->
-    <!-- Roman -> Byzantine split -->
-    <path d="M40,20 C200,120 200,200 40,300 L120,300 C260,200 260,120 120,20 Z" fill="#1f77b4" opacity="0.95" stroke="#222"/>
-    <path d="M120,300 C200,360 200,720 120,780 L200,780 C280,720 280,360 200,300 Z" fill="#ff7f0e" opacity="0.95" stroke="#222"/>
+  <!-- column guides -->
+  <g transform="translate(120,60)">
 
-    <!-- Britain flow -->
-    <g transform="translate(260,0)">
-      <path d="M40,600 C200,660 200,920 40,980 L120,980 C260,920 260,660 120,600 Z" fill="#2ca02c" opacity="0.95" stroke="#222"/>
-      <text x="20" y="580" class="label">Kingdom of England</text>
+    <!-- subtle vertical separators -->
+    <g stroke="#eee">
+      <line x1="220" x2="220" y1="0" y2="1840"/>
+      <line x1="440" x2="440" y1="0" y2="1840"/>
+      <line x1="660" x2="660" y1="0" y2="1840"/>
+      <line x1="880" x2="880" y1="0" y2="1840"/>
     </g>
+
+    <!-- nicer Roman -> Byzantine flow -->
+    <path d="M40,20 C120,110 120,200 40,300 L120,300 C200,200 200,110 120,20 Z" fill="url(#g1)" stroke="#2b5f99" stroke-width="1" opacity="0.95"/>
+    <path d="M120,300 C160,360 200,520 200,700 C200,880 120,980 40,1040 L120,1040 C200,980 280,880 280,700 C280,520 240,360 200,300 Z" fill="url(#g2)" stroke="#c66b21" stroke-width="1" opacity="0.95"/>
+    <text x="46" y="36" class="label">Roman Empire (Western)</text>
+    <text x="206" y="316" class="label">Byzantine Empire</text>
+
+    <!-- England flow (soft ribbon) -->
+    <path d="M260,420 C360,480 360,760 260,840 L340,840 C440,760 440,480 340,420 Z" fill="#7fc97f" stroke="#2e8b3a" stroke-width="1" opacity="0.95"/>
+    <text x="280" y="400" class="label">Kingdom of England</text>
 
     <!-- France flow -->
-    <g transform="translate(460,0)">
-      <path d="M40,420 C200,480 200,860 40,920 L120,920 C260,860 260,480 120,420 Z" fill="#d62728" opacity="0.95" stroke="#222"/>
-      <text x="20" y="400" class="label">Kingdom of France</text>
-    </g>
+    <path d="M480,360 C580,420 580,820 480,900 L560,900 C660,820 660,420 560,360 Z" fill="#f46d6d" stroke="#b33a3a" stroke-width="1" opacity="0.95"/>
+    <text x="500" y="340" class="label">Kingdom of France</text>
 
-    <!-- Holy Roman flow (branch off Carolingian) -->
-    <g transform="translate(660,0)">
-      <path d="M40,240 C200,300 200,760 40,820 L120,820 C260,760 260,300 120,240 Z" fill="#9467bd" opacity="0.95" stroke="#222"/>
-      <text x="20" y="220" class="label">Holy Roman Empire</text>
-    </g>
+    <!-- Holy Roman flow -->
+    <path d="M700,280 C780,360 780,820 700,920 L780,920 C860,820 860,360 780,280 Z" fill="#c7a0e6" stroke="#8b5fb3" stroke-width="1" opacity="0.95"/>
+    <text x="720" y="260" class="label">Holy Roman Empire</text>
 
     <!-- Iberia flow -->
-    <g transform="translate(860,0)">
-      <path d="M40,1080 C200,1140 200,1500 40,1560 L120,1560 C260,1500 260,1140 120,1080 Z" fill="#8c564b" opacity="0.95" stroke="#222"/>
-      <text x="20" y="1060" class="label">Crown of Castile</text>
+    <path d="M920,1040 C980,1100 980,1460 920,1520 L1000,1520 C1060,1460 1060,1100 1000,1040 Z" fill="#b58b6a" stroke="#7a5840" stroke-width="1" opacity="0.95"/>
+    <text x="940" y="1020" class="label">Crown of Castile</text>
+
+    <!-- timeline axis left -->
+    <g transform="translate(-40,0)">
+      <line x1="0" x2="0" y1="0" y2="1840" stroke="#333" stroke-width="2"/>
+      <text x="-10" y="0" class="small">27 BC</text>
+      <text x="-10" y="460" class="small">500</text>
+      <text x="-10" y="920" class="small">1000</text>
+      <text x="-10" y="1380" class="small">1500</text>
+      <text x="-10" y="1840" class="small">2000</text>
     </g>
 
-    <!-- legends -->
-    <g transform="translate(980,40)">
+    <!-- legend -->
+    <g transform="translate(980,20)">
       <text class="label">Legend</text>
-      <g transform="translate(0,20)">
-        <rect x="0" y="8" width="18" height="12" fill="#1f77b4" stroke="#333"/>
-        <text x="26" y="18">Roman Empire (Western)</text>
+      <g transform="translate(0,22)">
+        <rect x="0" y="4" width="18" height="12" fill="#1f77b4" stroke="#333"/>
+        <text x="26" y="16" class="small">Roman Empire (Western)</text>
       </g>
       <g transform="translate(0,40)">
-        <rect x="0" y="8" width="18" height="12" fill="#ff7f0e" stroke="#333"/>
-        <text x="26" y="18">Byzantine Empire</text>
+        <rect x="0" y="4" width="18" height="12" fill="#ff7f0e" stroke="#333"/>
+        <text x="26" y="16" class="small">Byzantine Empire</text>
       </g>
-      <g transform="translate(0,60)">
-        <rect x="0" y="8" width="18" height="12" fill="#2ca02c" stroke="#333"/>
-        <text x="26" y="18">Kingdom of England</text>
+      <g transform="translate(0,58)">
+        <rect x="0" y="4" width="18" height="12" fill="#7fc97f" stroke="#333"/>
+        <text x="26" y="16" class="small">Kingdom of England</text>
       </g>
     </g>
 
