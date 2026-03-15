@@ -26,38 +26,38 @@
 <line x1="190" x2="210" y1="2330.618606916707" y2="2330.618606916707" stroke="#666"/>
 <text x="180" y="2334.618606916707" text-anchor="end">2000</text>
 <text x="228" y="30" font-weight="700">Italy</text>
-<rect x="226" y="40" width="140" height="566.4169508037019" rx="6" ry="6" fill="#1f77b4" fill-opacity="0.95" stroke="#222"/>
-<text x="232" y="54" class="label">Roman Empire (Western)</text>
-<text x="244" y="56" font-size="11">• Augustus (Octavian)</text>
+<rect x="230" y="40" width="140" height="566.4169508037019" rx="6" ry="6" fill="#1f77b4" fill-opacity="0.95" stroke="#222"/>
+<text x="236" y="54" class="label">Roman Empire (Western)</text>
+<text x="248" y="56" font-size="11">• Augustus (Octavian)</text>
 <text x="388" y="30" font-weight="700">Balkans</text>
-<rect x="386" y="443.42912810521193" width="140" height="1267.0501704822211" rx="6" ry="6" fill="#ff7f0e" fill-opacity="0.95" stroke="#222"/>
-<text x="392" y="457.42912810521193" class="label">Byzantine Empire</text>
-<text x="404" y="682.0496833901607" font-size="11">• Justinian I</text>
-<text x="404" y="1303.1485630784218" font-size="11">• William I (the Conqueror)</text>
-<text x="404" y="978.3925962006819" font-size="11">• Charlemagne</text>
+<rect x="390" y="443.42912810521193" width="140" height="1267.0501704822211" rx="6" ry="6" fill="#ff7f0e" fill-opacity="0.95" stroke="#222"/>
+<text x="396" y="457.42912810521193" class="label">Byzantine Empire</text>
+<text x="408" y="682.0496833901607" font-size="11">• Justinian I</text>
+<text x="408" y="1303.1485630784218" font-size="11">• William I (the Conqueror)</text>
+<text x="408" y="978.3925962006819" font-size="11">• Charlemagne</text>
 <text x="548" y="30" font-weight="700">Britain</text>
-<rect x="546" y="1118.0711154408184" width="140" height="879.4417924987822" rx="6" ry="6" fill="#2ca02c" fill-opacity="0.95" stroke="#222"/>
-<text x="552" y="1132.0711154408184" class="label">Kingdom of England</text>
-<text x="564" y="1291.1485630784218" font-size="11">• William I (the Conqueror)</text>
-<text x="564" y="1955.1894788114953" font-size="11">• Louis XIV</text>
-<text x="564" y="1776.2104237700926" font-size="11">• Isabella I of Castile</text>
+<rect x="550" y="1118.0711154408184" width="140" height="879.4417924987822" rx="6" ry="6" fill="#2ca02c" fill-opacity="0.95" stroke="#222"/>
+<text x="556" y="1132.0711154408184" class="label">Kingdom of England</text>
+<text x="568" y="1291.1485630784218" font-size="11">• William I (the Conqueror)</text>
+<text x="568" y="1955.1894788114953" font-size="11">• Louis XIV</text>
+<text x="568" y="1776.2104237700926" font-size="11">• Isabella I of Castile</text>
 <text x="708" y="30" font-weight="700">Western Europe</text>
-<rect x="706" y="1023.1466147101802" width="140" height="1070.4208475401852" rx="6" ry="6" fill="#d62728" fill-opacity="0.95" stroke="#222"/>
-<text x="712" y="1037.14661471018" class="label">Kingdom of France</text>
-<text x="724" y="1291.1485630784218" font-size="11">• William I (the Conqueror)</text>
-<text x="724" y="1955.1894788114953" font-size="11">• Louis XIV</text>
-<text x="724" y="1776.2104237700926" font-size="11">• Isabella I of Castile</text>
+<rect x="710" y="1023.1466147101802" width="140" height="1070.4208475401852" rx="6" ry="6" fill="#d62728" fill-opacity="0.95" stroke="#222"/>
+<text x="716" y="1037.14661471018" class="label">Kingdom of France</text>
+<text x="728" y="1291.1485630784218" font-size="11">• William I (the Conqueror)</text>
+<text x="728" y="1955.1894788114953" font-size="11">• Louis XIV</text>
+<text x="728" y="1776.2104237700926" font-size="11">• Isabella I of Castile</text>
 <text x="868" y="30" font-weight="700">Central Europe</text>
-<rect x="866" y="974.5543107647345" width="140" height="1134.8339016074037" rx="6" ry="6" fill="#9467bd" fill-opacity="0.95" stroke="#222"/>
-<text x="872" y="988.5543107647345" class="label">Holy Roman Empire</text>
-<text x="884" y="1291.1485630784218" font-size="11">• William I (the Conqueror)</text>
-<text x="884" y="966.3925962006819" font-size="11">• Charlemagne</text>
-<text x="884" y="1967.1894788114953" font-size="11">• Louis XIV</text>
+<rect x="870" y="974.5543107647345" width="140" height="1134.8339016074037" rx="6" ry="6" fill="#9467bd" fill-opacity="0.95" stroke="#222"/>
+<text x="876" y="988.5543107647345" class="label">Holy Roman Empire</text>
+<text x="888" y="1291.1485630784218" font-size="11">• William I (the Conqueror)</text>
+<text x="888" y="966.3925962006819" font-size="11">• Charlemagne</text>
+<text x="888" y="1967.1894788114953" font-size="11">• Louis XIV</text>
 <text x="1028" y="30" font-weight="700">Iberia</text>
-<rect x="1026" y="1460.4773502191915" width="140" height="546.0759863614223" rx="6" ry="6" fill="#8c564b" fill-opacity="0.95" stroke="#222"/>
-<text x="1032" y="1474.4773502191915" class="label">Crown of Castile</text>
-<text x="1044" y="1943.1894788114953" font-size="11">• Louis XIV</text>
-<text x="1044" y="1764.2104237700926" font-size="11">• Isabella I of Castile</text>
+<rect x="1030" y="1460.4773502191915" width="140" height="546.0759863614223" rx="6" ry="6" fill="#8c564b" fill-opacity="0.95" stroke="#222"/>
+<text x="1036" y="1474.4773502191915" class="label">Crown of Castile</text>
+<text x="1048" y="1943.1894788114953" font-size="11">• Louis XIV</text>
+<text x="1048" y="1764.2104237700926" font-size="11">• Isabella I of Castile</text>
 <g transform="translate(980,40)">
 <text x="0" y="0" class="label">Countries (colors)</text>
 <rect x="0" y="8" width="14" height="14" fill="#1f77b4" stroke="#333"/>
