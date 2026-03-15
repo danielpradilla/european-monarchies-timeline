@@ -1,0 +1,24 @@
+[
+  {
+    "id": "roman-empire-west",
+    "name": "Roman Empire (Western)",
+    "start_year": -27,
+    "end_year": 476,
+    "founding_event": "Beginning of Principate (Octavian/Augustus)",
+    "end_event": "Deposition of Romulus Augustulus (476)",
+    "dynasties": ["Julio-Claudian", "Flavian"],
+    "region": ["Italy", "Mediterranean"],
+    "in_scope": true
+  },
+  {
+    "id": "kingdom-england",
+    "name": "Kingdom of England",
+    "start_year": 927,
+    "end_year": 1707,
+    "founding_event": "Unification under Æthelstan",
+    "end_event": "Acts of Union (1707)",
+    "dynasties": ["House of Wessex", "House of Norman"],
+    "region": ["Britain"],
+    "in_scope": true
+  }
+]
