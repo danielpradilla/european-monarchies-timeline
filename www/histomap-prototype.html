@@ -1,1 +1,28 @@
-<!doctype html><html><head><meta charset="utf-8"><title>Histomap prototype</title></head><body><h2>Histomap prototype (vertical)</h2><div><embed src="histomap-prototype.svg" type="image/svg+xml" width="100%"/></div></body></html>
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Histomap prototype</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;margin:18px}
+    .container{max-width:920px;margin:0 auto}
+    .viz{border:1px solid #eee; overflow:auto}
+    .viz embed{display:block; width:800px; height:1600px}
+    @media (max-width:900px){
+      .viz embed{width:640px;height:1280px}
+    }
+    @media (max-width:700px){
+      .viz embed{width:480px;height:960px}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Histomap prototype (vertical)</h2>
+    <div class="viz">
+      <embed src="histomap-prototype.svg" type="image/svg+xml"/>
+    </div>
+  </div>
+</body>
+</html>
