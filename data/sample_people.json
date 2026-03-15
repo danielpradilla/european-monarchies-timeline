@@ -1,0 +1,35 @@
+[
+  {
+    "id": "augustus",
+    "name": "Augustus (Octavian)",
+    "birth_year": -63,
+    "death_year": 14,
+    "reign_start": -27,
+    "reign_end": 14,
+    "dynasty": "Julio-Claudian",
+    "notes": "First Roman Emperor",
+    "source": "https://en.wikipedia.org/wiki/Augustus"
+  },
+  {
+    "id": "justinian",
+    "name": "Justinian I",
+    "birth_year": 482,
+    "death_year": 565,
+    "reign_start": 527,
+    "reign_end": 565,
+    "dynasty": "Justinian",
+    "notes": "Byzantine emperor who codified Roman law",
+    "source": "https://en.wikipedia.org/wiki/Justinian_I"
+  },
+  {
+    "id": "william-1",
+    "name": "William I (the Conqueror)",
+    "birth_year": 1028,
+    "death_year": 1087,
+    "reign_start": 1066,
+    "reign_end": 1087,
+    "dynasty": "House of Normandy",
+    "notes": "Conquered England in 1066",
+    "source": "https://en.wikipedia.org/wiki/William_I_of_England"
+  }
+]

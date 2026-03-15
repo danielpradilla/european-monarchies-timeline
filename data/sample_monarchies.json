@@ -11,13 +11,24 @@
     "in_scope": true
   },
   {
+    "id": "byzantine-empire",
+    "name": "Byzantine Empire",
+    "start_year": 330,
+    "end_year": 1453,
+    "founding_event": "Foundation of Constantinople (330)",
+    "end_event": "Fall of Constantinople (1453)",
+    "dynasties": ["Constantinian", "Justinian"],
+    "region": ["Balkans", "Anatolia"],
+    "in_scope": true
+  },
+  {
     "id": "kingdom-england",
     "name": "Kingdom of England",
     "start_year": 927,
     "end_year": 1707,
     "founding_event": "Unification under Æthelstan",
     "end_event": "Acts of Union (1707)",
-    "dynasties": ["House of Wessex", "House of Norman"],
+    "dynasties": ["House of Wessex", "House of Normandy"],
     "region": ["Britain"],
     "in_scope": true
   }
