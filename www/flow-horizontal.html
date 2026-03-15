@@ -15,10 +15,18 @@
 <h2>Horizontal flow prototype (grouped lanes)</h2>
 <div id="chart"></div>
 <script>
-const flows = await (await fetch('../data/flows.json')).json();
+// Inline flows to avoid fetch issues on mobile
+const flows = [
+  { "id":"roman-west","label":"Roman Empire (W)", "region":"Italy", "start":-27, "end":476, "color":"#1f77b4" },
+  { "id":"byzantine","label":"Byzantine Empire", "region":"Balkans", "start":330, "end":1453, "color":"#ff7f0e" },
+  { "id":"england","label":"Kingdom of England", "region":"Britain", "start":927, "end":1707, "color":"#2ca02c" },
+  { "id":"france","label":"Kingdom of France", "region":"Western Europe", "start":843, "end":1792, "color":"#d62728" },
+  { "id":"hre","label":"Holy Roman Empire", "region":"Central Europe", "start":800, "end":1806, "color":"#9467bd" },
+  { "id":"castile","label":"Crown of Castile", "region":"Iberia", "start":1230, "end":1715, "color":"#8c564b" }
+];
 
 const regions = Array.from(new Set(flows.map(d=>d.region)));
-const width = 1000, height = Math.max(500, regions.length*140);
+const width = Math.min(window.innerWidth-30, 1100), height = Math.max(500, regions.length*140);
 const margin = {left:120, right:40, top:40, bottom:40};
 
 const svg = d3.select('#chart').append('svg').attr('width', width).attr('height', height);
@@ -31,7 +39,7 @@ const x = d3.scaleLinear().domain(years).range([margin.left, width-margin.right]
 const laneHeight = Math.floor((height - margin.top - margin.bottom) / regions.length);
 
 // axis
-const xAxis = d3.axisTop(x).ticks(10).tickFormat(d=>d>0?d:d+' BC');
+const xAxis = d3.axisTop(x).ticks(8).tickFormat(d=>d>0?d:d+' BC');
 svg.append('g').attr('transform', `translate(0,${margin.top})`).call(xAxis);
 
 // draw lanes
