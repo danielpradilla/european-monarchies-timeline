@@ -1,0 +1,197 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>European Monarchies Timeline — Family Lines Prototype</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;background:#f8fafc;color:#0f172a}
+    .wrap{padding:24px;max-width:1400px;margin:0 auto}
+    h1{margin:0 0 8px;font-size:28px}
+    p.lead{margin:0 0 18px;color:#475569;max-width:900px}
+    .card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:16px;box-shadow:0 6px 24px rgba(15,23,42,.06)}
+    .legend{display:flex;gap:16px;flex-wrap:wrap;margin:14px 0 0 0;font-size:13px;color:#334155}
+    .legend-item{display:flex;align-items:center;gap:8px}
+    .swatch{width:14px;height:14px;border-radius:4px;border:1px solid rgba(15,23,42,.18)}
+    svg{display:block;width:100%;height:auto}
+    .axis path,.axis line{stroke:#cbd5e1}
+    .axis text{fill:#475569;font-size:12px}
+    .monarchy-label{font-size:13px;font-weight:700;fill:#0f172a}
+    .region-label{font-size:11px;fill:#64748b}
+    .house-label{font-size:11px;font-weight:600;fill:#fff;pointer-events:none}
+    .monarch-label{font-size:11px;fill:#0f172a}
+    .tooltip{position:fixed;pointer-events:none;background:rgba(15,23,42,.95);color:#fff;padding:8px 10px;border-radius:8px;font-size:12px;line-height:1.35;display:none;max-width:260px;box-shadow:0 10px 25px rgba(0,0,0,.2)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Family lines + main monarchs</h1>
+    <p class="lead">Each monarchy gets a lane. Dynasty or family lines are painted as colored bands across time using one base hue per monarchy with lighter or darker house variants, and major monarchs are marked on top as dots with labels.</p>
+    <div class="card">
+      <div id="chart"></div>
+      <div class="legend" id="legend"></div>
+    </div>
+  </div>
+  <div class="tooltip" id="tooltip"></div>
+
+  <script>
+    Promise.all([
+      d3.json('../data/sample_monarchies.json'),
+      d3.json('../data/sample_houses.json'),
+      d3.json('../data/sample_monarchs.json')
+    ]).then(([monarchies, houses, monarchs]) => {
+      const selectedIds = [
+        'roman-empire-west',
+        'holy-roman-empire',
+        'kingdom-england',
+        'kingdom-france'
+      ];
+
+      const monarchyList = monarchies.filter(d => selectedIds.includes(d.id));
+      const monarchyById = new Map(monarchyList.map(d => [d.id, d]));
+      const houseList = houses.filter(d => monarchyById.has(d.monarchy_id));
+      const monarchList = monarchs.filter(d => monarchyById.has(d.monarchy_id));
+
+      const width = 1280;
+      const margin = { top: 56, right: 40, bottom: 40, left: 190 };
+      const laneHeight = 110;
+      const laneGap = 18;
+      const innerWidth = width - margin.left - margin.right;
+      const height = margin.top + margin.bottom + monarchyList.length * laneHeight + (monarchyList.length - 1) * laneGap;
+
+      const yearMin = d3.min(monarchyList, d => d.start_year);
+      const yearMax = d3.max(monarchyList, d => d.end_year);
+      const x = d3.scaleLinear().domain([yearMin, yearMax]).range([margin.left, width - margin.right]);
+
+      const svg = d3.select('#chart').append('svg')
+        .attr('viewBox', `0 0 ${width} ${height}`)
+        .attr('role', 'img');
+
+      const tooltip = d3.select('#tooltip');
+      const showTip = (event, html) => {
+        tooltip.style('display', 'block').html(html);
+        moveTip(event);
+      };
+      const moveTip = (event) => {
+        tooltip.style('left', (event.clientX + 14) + 'px').style('top', (event.clientY + 14) + 'px');
+      };
+      const hideTip = () => tooltip.style('display', 'none');
+
+      const formatYear = (y) => y < 0 ? `${Math.abs(y)} BC` : `${y}`;
+      const axis = d3.axisTop(x).tickValues([-27, 0, 200, 400, 800, 1000, 1200, 1400, 1600, 1800]).tickFormat(formatYear);
+      svg.append('g').attr('class', 'axis').attr('transform', `translate(0,${margin.top - 18})`).call(axis);
+
+      monarchyList.forEach((monarchy, index) => {
+        const laneTop = margin.top + index * (laneHeight + laneGap);
+        const laneCenter = laneTop + laneHeight / 2;
+        const laneBottom = laneTop + laneHeight;
+        const laneHouses = houseList.filter(d => d.monarchy_id === monarchy.id);
+        const laneMonarchs = monarchList.filter(d => d.monarchy_id === monarchy.id);
+
+        svg.append('rect')
+          .attr('x', margin.left)
+          .attr('y', laneTop)
+          .attr('width', innerWidth)
+          .attr('height', laneHeight)
+          .attr('rx', 14)
+          .attr('fill', '#f8fafc')
+          .attr('stroke', '#e2e8f0');
+
+        svg.append('text')
+          .attr('class', 'monarchy-label')
+          .attr('x', 16)
+          .attr('y', laneTop + 26)
+          .text(monarchy.name);
+
+        svg.append('text')
+          .attr('class', 'region-label')
+          .attr('x', 16)
+          .attr('y', laneTop + 44)
+          .text((monarchy.region || []).join(' · '));
+
+        svg.append('line')
+          .attr('x1', margin.left)
+          .attr('x2', width - margin.right)
+          .attr('y1', laneCenter)
+          .attr('y2', laneCenter)
+          .attr('stroke', '#cbd5e1')
+          .attr('stroke-dasharray', '4 6');
+
+        laneHouses.forEach(house => {
+          const bandY = laneTop + 22;
+          const bandH = 34;
+          const x1 = x(house.start_year);
+          const x2 = x(house.end_year);
+          const bandW = Math.max(8, x2 - x1);
+
+          svg.append('rect')
+            .attr('x', x1)
+            .attr('y', bandY)
+            .attr('width', bandW)
+            .attr('height', bandH)
+            .attr('rx', 10)
+            .attr('fill', house.color)
+            .attr('stroke', 'rgba(15,23,42,.18)')
+            .on('mousemove', moveTip)
+            .on('mouseover', (event) => showTip(event, `<strong>${house.name}</strong><br>${monarchy.name}<br>${formatYear(house.start_year)} → ${formatYear(house.end_year)}`))
+            .on('mouseout', hideTip);
+
+          if (bandW > 64) {
+            svg.append('text')
+              .attr('class', 'house-label')
+              .attr('x', x1 + 10)
+              .attr('y', bandY + 21)
+              .text(house.name);
+          }
+        });
+
+        laneMonarchs.forEach(person => {
+          const house = laneHouses.find(d => d.id === person.house_id);
+          const cx = x((person.reign_start + person.reign_end) / 2);
+          const cy = laneBottom - 26;
+          const radius = person.importance >= 10 ? 7 : person.importance >= 8 ? 6 : 5;
+
+          svg.append('line')
+            .attr('x1', cx)
+            .attr('x2', cx)
+            .attr('y1', laneTop + 58)
+            .attr('y2', cy - radius)
+            .attr('stroke', '#94a3b8')
+            .attr('stroke-width', 1.2);
+
+          svg.append('circle')
+            .attr('cx', cx)
+            .attr('cy', cy)
+            .attr('r', radius)
+            .attr('fill', house ? house.color : '#334155')
+            .attr('stroke', '#fff')
+            .attr('stroke-width', 2)
+            .on('mousemove', moveTip)
+            .on('mouseover', (event) => showTip(event, `<strong>${person.name}</strong><br>${monarchy.name}<br>Reign: ${formatYear(person.reign_start)} → ${formatYear(person.reign_end)}${house ? `<br>House: ${house.name}` : ''}`))
+            .on('mouseout', hideTip);
+
+          if (person.label) {
+            svg.append('text')
+              .attr('class', 'monarch-label')
+              .attr('x', cx + 8)
+              .attr('y', cy + 4)
+              .text(person.name);
+          }
+        });
+      });
+
+      const legendMonarchies = monarchyList.map(monarchy => {
+        const firstHouse = houseList.find(d => d.monarchy_id === monarchy.id);
+        return { name: monarchy.name, color: firstHouse ? firstHouse.color : '#64748b' };
+      });
+      const legend = d3.select('#legend');
+      legendMonarchies.forEach(entry => {
+        const item = legend.append('div').attr('class', 'legend-item');
+        item.append('span').attr('class', 'swatch').style('background', entry.color);
+        item.append('span').text(entry.name + ' palette');
+      });
+    });
+  </script>
+</body>
+</html>

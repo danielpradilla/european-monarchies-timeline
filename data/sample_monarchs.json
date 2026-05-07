@@ -1,0 +1,172 @@
+[
+  {
+    "id": "augustus",
+    "monarchy_id": "roman-empire-west",
+    "house_id": "rome-julio-claudian",
+    "name": "Augustus",
+    "reign_start": -27,
+    "reign_end": 14,
+    "importance": 10,
+    "label": true
+  },
+  {
+    "id": "nero",
+    "monarchy_id": "roman-empire-west",
+    "house_id": "rome-julio-claudian",
+    "name": "Nero",
+    "reign_start": 54,
+    "reign_end": 68,
+    "importance": 7,
+    "label": true
+  },
+  {
+    "id": "trajan",
+    "monarchy_id": "roman-empire-west",
+    "house_id": "rome-nerva-antonine",
+    "name": "Trajan",
+    "reign_start": 98,
+    "reign_end": 117,
+    "importance": 8,
+    "label": true
+  },
+  {
+    "id": "hadrian",
+    "monarchy_id": "roman-empire-west",
+    "house_id": "rome-nerva-antonine",
+    "name": "Hadrian",
+    "reign_start": 117,
+    "reign_end": 138,
+    "importance": 7,
+    "label": false
+  },
+  {
+    "id": "aethelstan",
+    "monarchy_id": "kingdom-england",
+    "house_id": "england-wessex",
+    "name": "Æthelstan",
+    "reign_start": 927,
+    "reign_end": 939,
+    "importance": 9,
+    "label": true
+  },
+  {
+    "id": "william-i",
+    "monarchy_id": "kingdom-england",
+    "house_id": "england-normandy",
+    "name": "William I",
+    "reign_start": 1066,
+    "reign_end": 1087,
+    "importance": 10,
+    "label": true
+  },
+  {
+    "id": "henry-ii",
+    "monarchy_id": "kingdom-england",
+    "house_id": "england-plantagenet",
+    "name": "Henry II",
+    "reign_start": 1154,
+    "reign_end": 1189,
+    "importance": 8,
+    "label": false
+  },
+  {
+    "id": "henry-viii",
+    "monarchy_id": "kingdom-england",
+    "house_id": "england-tudor",
+    "name": "Henry VIII",
+    "reign_start": 1509,
+    "reign_end": 1547,
+    "importance": 10,
+    "label": true
+  },
+  {
+    "id": "elizabeth-i",
+    "monarchy_id": "kingdom-england",
+    "house_id": "england-tudor",
+    "name": "Elizabeth I",
+    "reign_start": 1558,
+    "reign_end": 1603,
+    "importance": 10,
+    "label": true
+  },
+  {
+    "id": "charlemagne",
+    "monarchy_id": "holy-roman-empire",
+    "house_id": "hre-carolingian",
+    "name": "Charlemagne",
+    "reign_start": 800,
+    "reign_end": 814,
+    "importance": 10,
+    "label": true
+  },
+  {
+    "id": "frederick-ii",
+    "monarchy_id": "holy-roman-empire",
+    "house_id": "hre-hohenstaufen",
+    "name": "Frederick II",
+    "reign_start": 1220,
+    "reign_end": 1250,
+    "importance": 9,
+    "label": true
+  },
+  {
+    "id": "charles-v",
+    "monarchy_id": "holy-roman-empire",
+    "house_id": "hre-habsburg",
+    "name": "Charles V",
+    "reign_start": 1519,
+    "reign_end": 1556,
+    "importance": 10,
+    "label": true
+  },
+  {
+    "id": "hugh-capet",
+    "monarchy_id": "kingdom-france",
+    "house_id": "france-capetian",
+    "name": "Hugh Capet",
+    "reign_start": 987,
+    "reign_end": 996,
+    "importance": 9,
+    "label": true
+  },
+  {
+    "id": "philippe-ii",
+    "monarchy_id": "kingdom-france",
+    "house_id": "france-capetian",
+    "name": "Philip II",
+    "reign_start": 1180,
+    "reign_end": 1223,
+    "importance": 8,
+    "label": false
+  },
+  {
+    "id": "francis-i",
+    "monarchy_id": "kingdom-france",
+    "house_id": "france-valois",
+    "name": "Francis I",
+    "reign_start": 1515,
+    "reign_end": 1547,
+    "importance": 8,
+    "label": true
+  },
+  {
+    "id": "henry-iv-france",
+    "monarchy_id": "kingdom-france",
+    "house_id": "france-bourbon",
+    "name": "Henry IV",
+    "reign_start": 1589,
+    "reign_end": 1610,
+    "importance": 9,
+    "label": true
+  },
+  {
+    "id": "louis-xiv",
+    "monarchy_id": "kingdom-france",
+    "house_id": "france-bourbon",
+    "name": "Louis XIV",
+    "reign_start": 1643,
+    "reign_end": 1715,
+    "importance": 10,
+    "label": true
+  }
+]

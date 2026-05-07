@@ -6,25 +6,39 @@
   <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
-  <style>body{font-family:system-ui,Segoe UI,Helvetica,Arial;margin:20px}</style>
+  <style>
+    body{font-family:system-ui,Segoe UI,Helvetica,Arial;margin:20px;line-height:1.45}
+    ul{line-height:1.7}
+  </style>
 </head>
 <body>
-  <h1>Prototype timeline (Vega-Lite)</h1>
-  <p>This is a lightweight prototype showing monarchies as horizontal bars from start_year to end_year. Data loaded from ../data/sample_monarchies.json</p>
+  <h1>European Monarchies Timeline — Prototypes</h1>
+  <p>Prototype pages for timeline layout, family-line rendering, and histomap experiments.</p>
+
+  <ul>
+    <li><a href="family-lines-prototype.html">Family lines + main monarchs</a></li>
+    <li><a href="vertical-unions-prototype.html">Vertical prototype with multi-realm unions</a></li>
+    <li><a href="flow-horizontal.html">Horizontal grouped-lane prototype</a></li>
+    <li><a href="histomap-prototype.html">Vertical histomap prototype</a></li>
+    <li><a href="flow-prototype.html">Flow prototype</a></li>
+  </ul>
+
+  <h2>Legacy Vega-Lite prototype</h2>
+  <p>This lightweight prototype shows monarchies as horizontal bars from start year to end year.</p>
   <div id="vis"></div>
 
   <script>
     const spec = {
       "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
       "width": 900,
-      "height": 200,
+      "height": 220,
       "data": {"url": "../data/sample_monarchies.json"},
       "mark": "bar",
       "encoding": {
         "y": {"field": "name", "type": "nominal", "axis": {"labelAngle": 0}},
         "x": {"field": "start_year", "type": "quantitative", "title": "Year"},
         "x2": {"field": "end_year"},
-        "color": {"field": "region", "type": "nominal"},
+        "color": {"field": "name", "type": "nominal", "legend": null},
         "tooltip": [
           {"field": "name", "type": "nominal"},
           {"field": "start_year", "type": "quantitative", "title": "Start"},
