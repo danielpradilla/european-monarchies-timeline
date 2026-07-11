@@ -1,47 +1,56 @@
-# SPECS.md
+# Product specification
 
-Project decision record and data schema
+## Objective
 
-Decisions (recorded)
-- Timeframe: start 27 BC (Roman Principate) — end 2026
-- Geography: Europe proper; include neighboring polities when historically tied (Byzantium, Balkan states). See territory rules below.
-- Depth: medium (10–15 notable monarchs for major monarchies; minimal entries for minor polities)
-- Visualization stack: Vega-Lite for timeline + D3 overlay for relationship lines
-- Hosting: user will provide hosting later (own site and/or GitHub Pages)
-- License: MIT
+Publish an interactive, source-backed timeline that lets a reader compare the major monarchies of Europe on one time axis and understand how crowns continued, split, merged, were conquered, were restored or disappeared.
 
-Data model (core)
-- monarchy:
-  - id: string (slug)
-  - name: string
-  - start_year: integer or ISO year
-  - end_year: integer or ISO year (use 2026 for continuing)
-  - founding_event: string
-  - end_event: string
-  - dynasties: [string]
-  - region: [string]
-  - in_scope: boolean
+## Editorial scope
 
-- person:
-  - id: string
-  - name: string
-  - birth_year: integer|null
-  - death_year: integer|null
-  - reign_start: integer|null
-  - reign_end: integer|null
-  - dynasty: string|null
-  - notes: string
-  - source: url
+- Timeframe: 27 BCE through 2026 CE
+- Geography: European polities plus transcontinental monarchies central to European history
+- Coverage: core continental monarchies, predecessor realms needed to explain them, and all surviving sovereign European monarchies
+- Depth: selected canonical monarchs rather than an exhaustive succession list
+- Periodization: disputed start and end dates must carry an explanatory note or related event
+- Sources: linked general references for every polity and relationship; official institutional sources for current sovereigns
 
-- event:
-  - id: string
-  - type: enum (founding, coronation, union, partition, abdication, revolution, treaty, conquest)
-  - year: integer
-  - description: string
-  - related_monarchies: [monarchy_id]
+## Visualization
 
-Provenance
-- Primary sources: Wikidata, Wikipedia; manual curation required for verification.
+- Primary desktop form: horizontal, time-aligned polity lanes
+- Mobile form: vertical focus view for one selected polity
+- Phase bars: constant height; width encodes duration only
+- House bands: dated dynasty or ruling-house association inside a polity phase
+- Reign marks: selected monarch with a duration line and midpoint dot
+- Relationships: typed connectors for continuity, conquest, dissolution, dynastic union, partition, personal union, restoration and state union
+- Story dates: 843, 1066, 1519, 1707, 1815, 1918 and 2026
+- Interaction: region, coverage, status and house filters; movable year snapshot; visible source-backed detail panel
 
-Update policy
-- Documented in README and docs/updates.md. Scripts in scripts/ for re-running data pulls.
+The chart must not use stream width as an unsupported proxy for political power.
+
+## Accessibility
+
+- Native form controls
+- Keyboard-focusable marks with descriptive accessible names
+- Visible details equivalent to pointer interaction
+- Labels and line styles paired with colour
+- Reduced-motion support
+- Responsive layout down to 320 CSS pixels
+
+## Data architecture
+
+The canonical dataset separates sources, houses, polities, phases, house-rule segments, people, reigns, relationships, events and story presets. See `DATA_MODEL.md`.
+
+## Publication
+
+- Static files live in `www/`
+- `npm run build` validates and synchronizes the web data
+- GitHub Pages deploys `www/` through GitHub Actions
+- The author's own host serves the committed `www/` directory and updates by fast-forward git pull
+- No server-side deployment or reset script
+
+## Required editorial artifacts
+
+- Interactive explorer: `www/index.html`
+- Methodology and source policy: `www/methodology.html`
+- Accompanying essay: `www/blog.html`
+- Repository data documentation: `DATA_MODEL.md`
+- Full MIT license

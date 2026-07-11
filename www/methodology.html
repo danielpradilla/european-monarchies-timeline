@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Scope, data model, sources and editorial method for The Braided Crowns of Europe.">
+  <meta name="theme-color" content="#fffdf9">
+  <title>Methodology · The Braided Crowns of Europe</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="wordmark" href="index.html">Braided Crowns</a>
+    <nav aria-label="Primary navigation">
+      <a href="index.html">Explore</a>
+      <a aria-current="page" href="methodology.html">Methodology</a>
+      <a href="blog.html">Essay</a>
+    </nav>
+  </header>
+
+  <main class="article-page">
+    <header>
+      <p class="eyebrow">Project notes</p>
+      <h1>How the timeline was made</h1>
+      <p class="dek">This is an editorial map of institutions, crowns and selected rulers. It is not a claim that every state had a clean birthday, that a dynasty was a single political actor, or that Europe can be reduced to forty-five lines.</p>
+    </header>
+
+    <h2>What is in scope</h2>
+    <p>The timeline begins in 27 BCE, the conventional start of the Roman Principate, and ends in 2026. It includes sovereign monarchies that had a large effect on European political history, predecessor realms needed to explain later states, and all twelve sovereign European states that still have a monarch as head of state.</p>
+    <p>The dataset has two editorial tiers. Tier 1 contains the main continental story: Rome and Byzantium, Francia, France, the Holy Roman Empire, Britain, the Iberian crowns, the Nordic kingdoms, Poland-Lithuania, the Habsburg lands, Russia, Prussia and Germany, the principal Italian and Balkan monarchies, and the Ottoman Empire. Tier 2 adds shorter-lived or smaller realms that clarify a regional story or survive today, such as Navarre, Croatia, Monaco and Liechtenstein.</p>
+    <p>"Europe" is treated as a historical field rather than a hard modern border. The Ottoman Empire is included because its European territory and diplomacy were central to the continent. Byzantium is included even when much of its territory lay in Anatolia. Colonial possessions are not drawn as extra lanes.</p>
+
+    <h2>One lane does not always mean one state</h2>
+    <p>A lane is an editorial container. Most represent a polity, but some join closely related constitutional phases so the overview stays readable. France, for example, contains West Francia, the pre-revolutionary kingdom, the Bourbon Restoration and the July Monarchy. The gaps between those bars matter. They show that the monarchy was interrupted.</p>
+    <p>England, Great Britain and the United Kingdom have separate lanes because the Acts of Union created new states. Castile and Aragon remain separate until their institutions were absorbed into a more centralized Spanish monarchy. Spain also has its own overlapping dynastic phase from 1479. That overlap is deliberate: Isabella and Ferdinand shared a monarchy without erasing the two crowns.</p>
+    <div class="note">The bars answer "when did this political phase exist?" The connectors answer "how did it relate to another phase?" Neither should be read without the other.</div>
+
+    <h2>Why this is not a Sankey diagram</h2>
+    <p><a href="https://github.com/d3/d3-sankey">Sankey diagrams are built for directed flows</a> with a measurable quantity. Energy, money and material can be divided and recombined, so the width of a stream has meaning. A crown has no comparable conserved quantity. Making the Habsburg line twice as thick as the Tudor line would look informative without saying what was measured.</p>
+    <p>Every polity bar therefore has the same height. Width encodes time and nothing else. Curved or vertical connectors record a typed relationship: continuity, conquest, dissolution, dynastic union, partition, personal union, restoration or state union. A dotted conquest line is a historical claim; a fat stream would be an unsupported metaphor.</p>
+    <p>A dendrogram has a different problem. It assumes a hierarchy and ordinarily places leaves at the same depth. <a href="https://d3js.org/d3-hierarchy/cluster">That is useful for hierarchical clustering and phylogenetic trees</a>. European dynastic history is a network with marriages, elective crowns, restorations, cadet branches and people who held several crowns at once. Trees remain useful for a focused genealogy, but they are not the main structure here.</p>
+
+    <h2>What each mark means</h2>
+    <table>
+      <thead>
+        <tr><th>Mark</th><th>Meaning</th><th>What it does not mean</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Long neutral bar</td><td>A dated institutional phase</td><td>Stable borders or an unchanged constitution</td></tr>
+        <tr><td>Coloured inset band</td><td>A ruling house assigned to that crown</td><td>Unbroken biological descent or unified family policy</td></tr>
+        <tr><td>Dot and short line</td><td>A selected monarch and the duration of the reign</td><td>A complete list of every ruler</td></tr>
+        <tr><td>Dashed connector</td><td>A personal or dynastic union</td><td>A single merged state</td></tr>
+        <tr><td>Solid connector</td><td>Continuity or a constitutional state union</td><td>Universal agreement about legal succession</td></tr>
+        <tr><td>Dotted connector</td><td>Partition, conquest or dissolution</td><td>A judgment about legitimacy</td></tr>
+      </tbody>
+    </table>
+
+    <h2>The data model</h2>
+    <p>The original prototype stored a monarch directly inside one monarchy. That breaks as soon as the same person holds two crowns. James VI and I should be one person with a Scottish reign and an English reign, not two people who happen to share a name.</p>
+    <p>The current dataset separates six things:</p>
+    <ul>
+      <li><code>polity</code>: the named lane and its editorial summary</li>
+      <li><code>phase</code>: a dated period when that polity or monarchical institution existed</li>
+      <li><code>house</code> and <code>rule</code>: a dynasty plus its dated association with a crown</li>
+      <li><code>person</code> and <code>reign</code>: one human linked to one or more titled reigns</li>
+      <li><code>relationship</code>: a typed connection among polity lanes</li>
+      <li><code>event</code> and <code>source</code>: dated context and the references used to support it</li>
+    </ul>
+    <p>This model also handles Charles V. He has a Spanish reign beginning in 1516 and an imperial reign beginning in 1519. Moving the year line between those dates shows the difference.</p>
+
+    <h2>Dates and disputed periodization</h2>
+    <p>Many beginnings and endings are conventional. The Western Roman Empire did not suddenly become a different civilization in 395. The Holy Roman Empire can reasonably be dated to Charlemagne in 800 or Otto I in 962. France can begin with the Treaty of Verdun in 843 or Hugh Capet in 987. "Spain" can refer to the dynastic monarchy of 1479 or a more centralized state after the Nueva Planta decrees.</p>
+    <p>The project deals with those disagreements in three ways. It records the chosen date, keeps a note explaining the choice, and uses relationship lines to show precursors that would otherwise disappear. The Holy Roman lane starts in 962, while Charlemagne's coronation remains visible as an event in 800.</p>
+    <p>Years before the Common Era use negative integers in the data. The interface prints them as BCE and never displays a year zero.</p>
+
+    <h2>Sources and verification</h2>
+    <p>The first publication uses Wikipedia and official royal-house pages as navigational references, following the project's original source policy. Current sovereigns were checked against their official institutions in July 2026. Every selected polity, transition and monarch links back to at least one reference from the detail panel.</p>
+    <p>This is a curated public-history dataset, not a prosopographical database. A second research pass should add scholarly references for disputed medieval boundaries, elective successions and the constitutional status of composite monarchies. Source URLs belong to records rather than chart labels so they can be expanded without redesigning the visual.</p>
+
+    <h2>Updates, tests and corrections</h2>
+    <p>The canonical file is <code>data/timeline.json</code>. A build command copies it into the static site, and the validator checks IDs, date ranges, cross-references, required current monarchies, source URLs and minimum coverage. The website itself has no database or server dependency.</p>
+    <p>Corrections are welcome as focused GitHub issues. A useful report names the record, gives the proposed date or wording, and links to a source. Questions of periodization may result in a better note rather than a single "correct" year.</p>
+    <p><a href="https://github.com/danielpradilla/european-monarchies-timeline/issues">Report a correction on GitHub</a></p>
+
+    <h2>Accessibility and responsive design</h2>
+    <p>All controls are native form elements. Polity labels, phases, house bands, monarch dots and relationship symbols are keyboard-focusable buttons with descriptive labels. Selecting any mark writes the same information into a visible detail panel, so hover is never the only route to the text.</p>
+    <p>The desktop view uses a horizontal time axis because forty-five monarchies do not fit as narrow vertical columns. On small screens, the site switches to a focused vertical timeline for one selected polity. Motion is reduced when the operating system requests it, and meaning is paired with labels and line styles rather than colour alone.</p>
+
+    <h2>License</h2>
+    <p>The data, code and original writing in this repository are available under the MIT License. Linked reference material remains subject to the terms of its publishers.</p>
+  </main>
+
+  <footer>
+    <p><a href="index.html">Return to the timeline</a></p>
+    <p><a href="blog.html">Read the accompanying essay</a></p>
+  </footer>
+</body>
+</html>

@@ -1,32 +1,38 @@
 [
   {
-    "id": "byzantine-empire",
-    "wikidata": "Q214",
-    "people_count": 0
+    "id": "eastern-roman-empire",
+    "wikidata": "Q12544",
+    "label": "Byzantine Empire",
+    "candidate_count": 500
   },
   {
-    "id": "kingdom-england",
-    "wikidata": "Q145",
-    "people_count": 0
+    "id": "england",
+    "wikidata": "Q179876",
+    "label": "Kingdom of England",
+    "candidate_count": 500
   },
   {
-    "id": "kingdom-france",
-    "wikidata": "Q142",
-    "people_count": 0
+    "id": "france",
+    "wikidata": "Q70972",
+    "label": "Kingdom of France",
+    "candidate_count": 500
   },
   {
     "id": "holy-roman-empire",
-    "wikidata": "Q23484",
-    "people_count": 0
+    "wikidata": "Q12548",
+    "label": "Holy Roman Empire",
+    "candidate_count": 500
   },
   {
-    "id": "crown-of-castile",
-    "wikidata": "Q9258",
-    "people_count": 0
+    "id": "castile",
+    "wikidata": "Q217196",
+    "label": "Crown of Castile",
+    "candidate_count": 500
   },
   {
     "id": "roman-empire",
-    "wikidata": "Q458",
-    "people_count": 0
+    "wikidata": "Q2277",
+    "label": "Roman Empire",
+    "candidate_count": 82
   }
 ]

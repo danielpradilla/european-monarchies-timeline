@@ -1,13 +1,17 @@
 {
   "name": "european-monarchies-timeline",
   "version": "1.0.0",
-  "description": "Project to collect, model and visualise European monarchies from the Roman era through 2026.",
-  "main": "index.js",
+  "description": "A source-backed interactive timeline of major European monarchies from 27 BCE through 2026.",
   "directories": {
     "doc": "docs"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "npm run validate:data && npm run build:data",
+    "build:data": "node scripts/build_site_data.js",
+    "ingest:wikidata": "node scripts/ingest_wikidata.js",
+    "serve": "python3 -m http.server 8000 --directory www",
+    "test": "node --test tests/*.test.js && npm run validate:data",
+    "validate:data": "node scripts/validate_data.js"
   },
   "repository": {
     "type": "git",
@@ -15,13 +19,10 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "type": "commonjs",
   "bugs": {
     "url": "https://github.com/danielpradilla/european-monarchies-timeline/issues"
   },
-  "homepage": "https://github.com/danielpradilla/european-monarchies-timeline#readme",
-  "dependencies": {
-    "node-fetch": "^2.7.0"
-  }
+  "homepage": "https://github.com/danielpradilla/european-monarchies-timeline#readme"
 }

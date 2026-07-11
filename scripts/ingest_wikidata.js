@@ -1,91 +1,133 @@
 /*
-Simple Wikidata ingestion script (Node).
+Fetch review candidates from Wikidata without modifying the canonical timeline.
 
-Purpose: given a list of monarchy Wikidata Q-IDs, fetch rulers and basic metadata,
-then write two JSON outputs:
-- data/wikidata_monarchies.json
-- data/wikidata_people.json
+The output is deliberately separate from data/timeline.json. Wikidata position
+and date coverage is uneven, so every candidate still requires editorial review.
+Run with Node 22+:
 
-Notes:
-- This script uses node-fetch. Run `npm install node-fetch@2` in the project
-  (or adapt to native fetch in Node 18+).
-- Query strategy: for each monarchy QID we fetch rulers (P35? P39? uses 'position held')
-  We'll query for humans who held a position that is subclass of 'monarch' and are
-  linked to the monarchy item.
+  node scripts/ingest_wikidata.js
 */
 
 const fs = require('fs');
-const fetch = require('node-fetch');
+const path = require('path');
 
 const endpoint = 'https://query.wikidata.org/sparql';
-const monIds = [
-  // example: Byzantium, England (king of), France (king of), Holy Roman Empire (emperor), Castile
-  { id: 'Q214', slug: 'byzantine-empire' },        // Byzantine Empire
-  { id: 'Q145', slug: 'kingdom-england' },         // United Kingdom placeholder — we query kings of England differently
-  { id: 'Q142', slug: 'kingdom-france' },
-  { id: 'Q23484', slug: 'holy-roman-empire' },
-  { id: 'Q9258', slug: 'crown-of-castile' },
-  { id: 'Q458', slug: 'roman-empire' }
+const realms = [
+  { id: 'Q12544', slug: 'eastern-roman-empire', label: 'Byzantine Empire' },
+  { id: 'Q179876', slug: 'england', label: 'Kingdom of England' },
+  { id: 'Q70972', slug: 'france', label: 'Kingdom of France' },
+  { id: 'Q12548', slug: 'holy-roman-empire', label: 'Holy Roman Empire' },
+  { id: 'Q217196', slug: 'castile', label: 'Crown of Castile' },
+  { id: 'Q2277', slug: 'roman-empire', label: 'Roman Empire' }
 ];
 
 async function sparql(query) {
-  const url = endpoint + '?query=' + encodeURIComponent(query);
-  const res = await fetch(url, { headers: { Accept: 'application/sparql-results+json' } });
-  if (!res.ok) throw new Error('SPARQL query failed: ' + res.status);
-  return res.json();
+  const url = `${endpoint}?query=${encodeURIComponent(query)}`;
+  const response = await fetch(url, {
+    headers: {
+      Accept: 'application/sparql-results+json',
+      'User-Agent': 'european-monarchies-timeline/1.0 (https://github.com/danielpradilla/european-monarchies-timeline)'
+    }
+  });
+  if (!response.ok) throw new Error(`SPARQL query failed with HTTP ${response.status}`);
+  return response.json();
 }
 
-function wikidataUrl(qid) { return `https://www.wikidata.org/wiki/${qid}`; }
+function qid(uri) {
+  return uri.split('/').pop();
+}
 
-async function fetchMonarchy(mon) {
-  // Query: people who held a 'position held' (P39) that is instance of/held for this monarchy
-  const q = `
-SELECT ?person ?personLabel ?personDescription ?personBirth ?personDeath ?start ?end ?position ?positionLabel WHERE {
-  ?person wdt:P39 ?position .
-  ?position wdt:P279* ?posType .
-  ?posType wdt:P31 wd:Q11696 . # Q11696 = monarch
-  OPTIONAL { ?person wdt:P569 ?personBirth }
-  OPTIONAL { ?person wdt:P570 ?personDeath }
-  OPTIONAL { ?pNode ps:P39 ?position; pq:P580 ?start; pq:P582 ?end; }
-  FILTER EXISTS { ?position wdt:P17 wd:${mon.id} } # position's country = monarchy
+function wikidataYear(value) {
+  if (!value) return null;
+  const match = /^([+-]?\d+)-/.exec(value);
+  return match ? Number(match[1]) : null;
+}
+
+async function fetchRealm(realm) {
+  const query = `
+SELECT ?person ?personLabel ?position ?positionLabel ?birth ?death ?start ?end WHERE {
+  ?person p:P39 ?statement .
+  ?statement ps:P39 ?position .
+  ?position (wdt:P1001|wdt:P17) wd:${realm.id} .
+  OPTIONAL { ?statement pq:P580 ?start }
+  OPTIONAL { ?statement pq:P582 ?end }
+  OPTIONAL { ?person wdt:P569 ?birth }
+  OPTIONAL { ?person wdt:P570 ?death }
   SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
 }
-ORDER BY ?start
+ORDER BY ?start ?personLabel
 LIMIT 500
 `;
-  try {
-    const r = await sparql(q);
-    const people = r.results.bindings.map(b => ({
-      id: b.person.value.split('/').pop(),
-      name: b.personLabel ? b.personLabel.value : null,
-      description: b.personDescription ? b.personDescription.value : null,
-      birth_year: b.personBirth ? new Date(b.personBirth.value).getUTCFullYear() : null,
-      death_year: b.personDeath ? new Date(b.personDeath.value).getUTCFullYear() : null,
-      reign_start: b.start ? new Date(b.start.value).getUTCFullYear() : null,
-      reign_end: b.end ? new Date(b.end.value).getUTCFullYear() : null,
-      position: b.position ? b.position.value.split('/').pop() : null,
-      wikidata: wikidataUrl(b.person.value.split('/').pop())
-    }));
-
-    return { monarchy: mon, people };
-  } catch (err) {
-    console.error('Error fetching', mon, err);
-    return { monarchy: mon, people: [] };
-  }
+  const result = await sparql(query);
+  return result.results.bindings.map((binding) => ({
+    realm_id: realm.id,
+    polity_id: realm.slug,
+    person_id: qid(binding.person.value),
+    person_name: binding.personLabel?.value || qid(binding.person.value),
+    position_id: qid(binding.position.value),
+    position_name: binding.positionLabel?.value || qid(binding.position.value),
+    birth_year: wikidataYear(binding.birth?.value),
+    death_year: wikidataYear(binding.death?.value),
+    reign_start: wikidataYear(binding.start?.value),
+    reign_end: wikidataYear(binding.end?.value),
+    person_url: `https://www.wikidata.org/wiki/${qid(binding.person.value)}`
+  }));
 }
 
-(async function main(){
-  const allMonarchies = [];
-  const allPeople = {};
+async function main() {
+  const candidates = [];
+  const summaries = [];
 
-  for (const m of monIds) {
-    const res = await fetchMonarchy(m);
-    allMonarchies.push({ id: m.slug, wikidata: m.id, people_count: res.people.length });
-    for (const p of res.people) allPeople[p.id] = p;
+  for (const realm of realms) {
+    try {
+      const rows = await fetchRealm(realm);
+      summaries.push({
+        id: realm.slug,
+        wikidata: realm.id,
+        label: realm.label,
+        candidate_count: rows.length
+      });
+      candidates.push(...rows);
+      console.log(`${realm.label}: ${rows.length} candidate rows`);
+    } catch (error) {
+      summaries.push({
+        id: realm.slug,
+        wikidata: realm.id,
+        label: realm.label,
+        candidate_count: 0,
+        error: error.message
+      });
+      console.error(`${realm.label}: ${error.message}`);
+    }
   }
 
-  fs.writeFileSync('data/wikidata_monarchies.json', JSON.stringify(allMonarchies, null, 2));
-  fs.writeFileSync('data/wikidata_people.json', JSON.stringify(Object.values(allPeople), null, 2));
+  const seen = new Set();
+  const deduplicated = candidates.filter((candidate) => {
+    const key = [
+      candidate.polity_id,
+      candidate.person_id,
+      candidate.position_id,
+      candidate.reign_start,
+      candidate.reign_end
+    ].join(':');
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 
-  console.log('Wrote data/wikidata_monarchies.json and data/wikidata_people.json');
-})();
+  const dataDirectory = path.join(__dirname, '..', 'data');
+  fs.writeFileSync(
+    path.join(dataDirectory, 'wikidata_monarchies.json'),
+    `${JSON.stringify(summaries, null, 2)}\n`
+  );
+  fs.writeFileSync(
+    path.join(dataDirectory, 'wikidata_candidates.json'),
+    `${JSON.stringify(deduplicated, null, 2)}\n`
+  );
+  console.log(`Wrote ${deduplicated.length} review candidates without changing the canonical timeline.`);
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

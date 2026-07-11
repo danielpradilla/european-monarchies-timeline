@@ -1,25 +1,31 @@
-# TASKS.md
+# Project status
 
-Project interview decisions and task record (explicit)
+## Completed for the first publishable edition
 
-Deployment strategy
-- NO custom deployment scripts will be used on the server.
-- Server updates will be performed by explicit git pulls (manual or via CI that performs only a pull).
-- I removed the server-side deploy.sh. If you want automated pulls, we will implement a GitHub Action that SSHes to the server and runs a pull, or configure a webhook receiver on the server that triggers a safe `git fetch && git reset --hard origin/master`.
+- Replaced the six-item sample architecture with normalized shared data
+- Added 45 polity lanes, all surviving European monarchies and broad historical coverage
+- Separated people from reigns so one person can hold several crowns
+- Added typed personal unions, state unions, partitions, conquests, restorations and dissolutions
+- Built the horizontal braided timeline and vertical mobile focus view
+- Added story dates, a year crosshair, filters, house highlighting and source-backed details
+- Added keyboard-accessible marks and reduced-motion support
+- Wrote the methodology and accompanying essay
+- Added data validation, tests, build scripts and GitHub Pages deployment
+- Reconciled package and repository licensing under MIT
 
-Decisions recorded
-- Project name: european-monarchies-timeline
-- Local path: ~/dev/european-monarchies-timeline
-- Timeframe: 27 BC (Roman Principate) → 2026
-- Geography: Europe proper; include neighbouring polities when historically tied
-- Depth: Medium (10–15 notable monarchs per major monarchy)
-- Famous monarchs: include canonical figures (e.g., Augustus, Charlemagne, William I, Henry VIII, Louis XIV, Catherine the Great, Peter the Great) — curated list to be compiled
-- Events: founding, coronation, union, partition, abdication, revolution, treaty, conquest
-- Visualization stack: Vega-Lite for timeline + D3 overlay for relationships
-- Data sources: Mix of Wikidata SPARQL + manual curation
-- Hosting: GitHub Pages + user host (DreamHost) — deploy by pull only
-- License: MIT
-- Workflow: main branch = master; feature branches & PRs recommended for major work
-- Maintenance: document update scripts in scripts/ and schedule manual/CI runs as needed
+## Editorial backlog
 
-(15-step items omitted for brevity — see earlier TASKS for full mapping)
+The site can be published in its current form. Later editions can deepen it without changing the architecture:
+
+- Add scholarly sources for disputed medieval periodization
+- Expand selected reigns in underrepresented Tier 2 polities
+- Add an optional focused genealogy for individual houses
+- Add a synchronized historical map only after reliable boundary data is selected
+- Add translations after the English terminology is stable
+
+## Deployment policy
+
+- `master` is the production branch
+- GitHub Pages deploys through `.github/workflows/pages.yml`
+- The author's web host updates by `git pull --ff-only`
+- No server-side deploy script, forced reset or unreviewed data ingestion
