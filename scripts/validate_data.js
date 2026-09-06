@@ -1,184 +1,139 @@
-const fs = require('fs');
-const path = require('path');
+const fs = require('node:fs');
+const path = require('node:path');
+const Core = require('../www/assets/timeline-core');
+const collections = ['sources', 'houses', 'polities', 'phases', 'rules', 'persons', 'reigns', 'relationships', 'events', 'presets'];
 
-const dataPath = path.join(__dirname, '..', 'data', 'timeline.json');
-const data = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
-const errors = [];
-
-function fail(message) {
-  errors.push(message);
+function validateData(data, extracts = {}) {
+  const issues = [];
+  const issue = (severity, collection, id, code, message) => issues.push({ severity, collection, id, code, message });
+  const error = (c, id, code, message) => issue('error', c, id, code, message);
+  const warn = (c, id, code, message) => issue('review', c, id, code, message);
+  const result = () => ({ snapshot: data?.meta?.updated, counts: Object.fromEntries(collections.map(k => [k, Array.isArray(data?.[k]) ? data[k].length : 0])),
+    errors: issues.filter(i => i.severity === 'error').length, review_items: issues.filter(i => i.severity === 'review').length, issues });
+  if (!data || typeof data !== 'object' || !data.meta) {
+    error('meta', '', 'schema', 'Dataset and metadata are required'); return result();
+  }
+  for (const key of collections) if (!Array.isArray(data[key]) || data[key].some(r => !r || typeof r !== 'object' || Array.isArray(r))) {
+    error(key, '', 'schema', 'Expected an array of records');
+  }
+  if (issues.length) return result();
+  const ids = Object.fromEntries(collections.map(k => [k, new Map()]));
+  const text = (value) => typeof value === 'string' && value.trim().length > 0;
+  const safeUrl = (value) => { try { const u = new URL(value); return u.protocol === 'https:' && !u.username && !u.password; } catch { return false; } };
+  const specialist = id => ['scholarly_reference','specialist_reference','official','primary_source'].includes(ids.sources.get(id)?.type);
+  const year = n => Number.isInteger(n) && n !== 0 && n >= data.meta.start_year && n <= data.meta.end_year;
+  const end = r => Core.endYear(r, data.meta);
+  if (!Number.isInteger(data.meta.start_year) || !Number.isInteger(data.meta.end_year) || data.meta.start_year === 0 || data.meta.end_year === 0 || data.meta.start_year >= data.meta.end_year) error('meta', '', 'bounds', 'Invalid project year bounds');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(data.meta.updated || '') || !Number.isFinite(Date.parse(data.meta.updated))) error('meta', '', 'updated', 'Expected a valid snapshot date');
+  for (const key of collections) for (const r of data[key]) {
+    if (!text(r.id) || ids[key].has(r.id)) error(key, r.id, 'id', 'ID must be present and unique within its collection');
+    ids[key].set(r.id, r);
+  }
+  const ref = (key, r, target, value) => { if (!ids[target].has(value)) error(key, r.id, 'reference', `Unknown ${target} reference: ${value}`); };
+  const required = { sources:['title','url','type'], houses:['name'], polities:['name','short_name','region','summary'], phases:['name'], persons:['name','url'], reigns:['title'], relationships:['label','description'], events:['label','description'], presets:['label','title','description'] };
+  for (const key of collections) for (const r of data[key]) {
+    for (const field of required[key] || []) if (!text(r[field])) error(key, r.id, 'required', `Missing text: ${field}`);
+    if (r.url !== undefined && !safeUrl(r.url)) error(key, r.id, 'url', 'URL must be HTTPS without credentials');
+    if (key === 'sources' && r.type !== 'reference' && !specialist(r.id)) error(key, r.id, 'source-type', 'Unknown source classification');
+    if (r.sources !== undefined || ['polities','relationships','events'].includes(key)) {
+      if (!Array.isArray(r.sources) || !r.sources.length) error(key, r.id, 'sources', 'At least one source is required');
+      else for (const id of r.sources) ref(key, r, 'sources', id);
+    }
+    if (r.citations !== undefined) {
+      if (!Array.isArray(r.citations) || !r.citations.length) error(key, r.id, 'citations', 'Citations must be a non-empty array');
+      else for (const c of r.citations) {
+        ref(key, r, 'sources', c?.source_id);
+        if (c?.locator !== undefined && !text(c.locator)) error(key, r.id, 'locator', 'Citation locator must be non-empty text');
+      }
+    }
+    if (['phases','rules','reigns'].includes(key)) {
+      if (!year(r.start) || (r.end !== null && !year(r.end)) || r.start > end(r)) error(key, r.id, 'range', 'Invalid or out-of-bounds date range');
+      ref(key, r, 'polities', r.polity_id);
+      if (r.end === null && ids.polities.get(r.polity_id)?.status !== 'current') error(key, r.id, 'ongoing', 'Only current polities can have ongoing records');
+      if (!r.citations?.length && !r.sources?.length) warn(key, r.id, 'claim-source', 'No source attached directly to this dated claim; polity bibliography is background only.');
+      if (r.date_precision !== undefined && !['year','circa','traditional','disputed'].includes(r.date_precision)) error(key, r.id, 'precision', 'Unknown date precision');
+      if (r.date_precision && r.date_precision !== 'year') {
+        if (!text(r.note)) error(key, r.id, 'precision-note', 'Uncertain dates require an explanatory note');
+        const direct = [...(Array.isArray(r.sources) ? r.sources : []), ...(Array.isArray(r.citations) ? r.citations : []).map(c => c?.source_id)];
+        if (!direct.some(specialist)) warn(key, r.id, 'uncertainty-source', 'Uncertain date needs a direct specialist or institutional citation.');
+      }
+    }
+    if (['relationships','events'].includes(key) && Array.isArray(r.sources) && r.sources.length && ![...r.sources,...(Array.isArray(r.citations) ? r.citations.map(c=>c?.source_id) : [])].some(specialist)) {
+      warn(key, r.id, 'specialist-source', 'Only general references are attached; specialist or institutional review is still needed.');
+    }
+    if (r.review_note) warn(key, r.id, 'editorial', r.review_note);
+  }
+  const phasesFor = new Map(data.polities.map(p => [p.id, data.phases.filter(r => r.polity_id === p.id).sort((a,b)=>a.start-b.start)]));
+  for (const p of data.polities) {
+    const phases = phasesFor.get(p.id);
+    if (!['current','former'].includes(p.status) || ![1,2].includes(p.tier)) error('polities', p.id, 'classification', 'Invalid status or coverage tier');
+    if (!phases.length) error('polities', p.id, 'phases', 'Polity has no phase');
+    if (p.status === 'current' && !phases.some(r=>r.end===null)) error('polities', p.id, 'ongoing', 'Current polity needs an ongoing phase');
+    if (p.status === 'current' && !data.reigns.some(r=>r.polity_id===p.id && r.end===null)) error('polities', p.id, 'sovereign', 'Current polity needs an ongoing sovereign or co-prince reign');
+    for (let i=1;i<phases.length;i++) if (phases[i].start < end(phases[i-1])) error('phases', phases[i].id, 'overlap', 'Institutional phases overlap beyond a shared boundary year');
+  }
+  function covered(r) {
+    let cursor = Core.yearPosition(r.start);
+    for (const p of phasesFor.get(r.polity_id) || []) {
+      if (Core.yearPosition(p.start) <= cursor && Core.yearPosition(end(p)) >= cursor) cursor = Core.yearPosition(end(p)) + 1;
+    }
+    return cursor > Core.yearPosition(end(r));
+  }
+  for (const key of ['rules','reigns']) for (const r of data[key]) {
+    if (!covered(r)) error(key, r.id, 'phase-coverage', 'Record extends outside the polity’s phases or crosses an institutional gap');
+    if (key==='rules' || r.house_id) ref(key, r, 'houses', r.house_id);
+    if (key==='reigns') {
+      ref(key, r, 'persons', r.person_id);
+      if (![1,2,3].includes(r.importance) || typeof r.label !== 'boolean') error(key,r.id,'display','Invalid reign importance or label flag');
+    }
+  }
+  for (const r of data.relationships) {
+    if (!Object.hasOwn(Core.relationshipTypes,r.type)) error('relationships',r.id,'type','Unknown relationship type');
+    if (!year(r.start) || (r.end !== undefined && (!year(r.end) || r.end<r.start))) error('relationships',r.id,'range','Invalid relationship date range');
+    if (!Array.isArray(r.from) || !Array.isArray(r.to)) { error('relationships',r.id,'endpoints','Endpoints must be arrays'); continue; }
+    if (!r.from.length && !r.to.length) error('relationships',r.id,'endpoints','Relationship needs an endpoint');
+    if (r.type==='state_union' && new Set(r.from).size<2) error('relationships',r.id,'union-inputs','A state union needs at least two distinct input polities');
+    for (const id of [...r.from,...r.to]) {
+      ref('relationships',r,'polities',id);
+      // A 1 January transition can follow a predecessor ending on 31 December.
+      const adjacentPredecessor = p => r.from.includes(id) && p.end !== null && Core.yearPosition(p.end) + 1 === Core.yearPosition(r.start);
+      if (!(phasesFor.get(id)||[]).some(p=>Core.activeDuring(p,r.start,data.meta) || adjacentPredecessor(p))) error('relationships',r.id,'endpoint-date',`${id} has no phase active at the transition or ending in the immediately preceding year`);
+    }
+  }
+  for (const key of ['events','presets']) for (const r of data[key]) {
+    if (!year(r.year)) error(key,r.id,'year','Year must be within bounds and cannot be zero');
+    if (key==='events') {
+      if (!Array.isArray(r.polity_ids) || !r.polity_ids.length) error(key,r.id,'polities','Event must identify at least one polity');
+      else for (const id of r.polity_ids) ref(key,r,'polities',id);
+    }
+  }
+  for (const p of data.persons) if (!data.reigns.some(r=>r.person_id===p.id)) error('persons',p.id,'orphan','Person has no reign');
+  for (const h of data.houses) if (h.kind !== undefined && !['dynasty','office'].includes(h.kind)) error('houses',h.id,'kind','House kind must be dynasty or office');
+  for (const key of ['houses','persons']) for (const r of data[key]) {
+    const title = r.wikipedia_title || Core.wikipediaTitle(r.url);
+    if (!title) { warn(key,r.id,'wikipedia-mapping','No explicit Wikipedia article; the original reference remains available.'); continue; }
+    const page = extracts[title];
+    if (!page) { warn(key,r.id,'wikipedia-cache',`No cached extract for ${title}`); continue; }
+    if (!text(page.text) || page.text.length<40 || page.text.length>1400 || /<\/?[a-z][^>]*>/i.test(page.text) || !Core.wikipediaTitle(page.url) || !Number.isInteger(page.revision_id) || !Number.isInteger(page.page_id) || !Number.isFinite(Date.parse(page.retrieved_at)) || !Number.isFinite(Date.parse(page.revision_at))) error(key,r.id,'wikipedia-extract','Extract must be plain text with a Wikipedia URL, page/revision IDs and timestamps');
+  }
+  const report=result();
+  report.claims = ['phases','rules','reigns'].reduce((n,k)=>n+data[k].length,0);
+  report.claims_with_sources = ['phases','rules','reigns'].reduce((n,k)=>n+data[k].filter(r=>r.citations?.length||r.sources?.length).length,0);
+  report.claims_with_specialist_sources = ['phases','rules','reigns'].reduce((n,k)=>n+data[k].filter(r=>[...(Array.isArray(r.sources)?r.sources:[]),...(Array.isArray(r.citations)?r.citations.map(c=>c?.source_id):[])].some(specialist)).length,0);
+  report.wikipedia_extracts = Object.keys(extracts).length;
+  return report;
 }
-
-function uniqueIds(name, items) {
-  const ids = new Set();
-  for (const item of items) {
-    if (!item.id) fail(`${name}: item without id`);
-    if (ids.has(item.id)) fail(`${name}: duplicate id ${item.id}`);
-    ids.add(item.id);
+if (require.main === module) {
+  const root=path.join(__dirname,'..');
+  const data=JSON.parse(fs.readFileSync(path.join(root,'data/timeline.json')));
+  const cache=path.join(root,'data/wikipedia-extracts.json');
+  const report=validateData(data,fs.existsSync(cache)?JSON.parse(fs.readFileSync(cache)):{});
+  if (process.argv.includes('--json')) console.log(JSON.stringify(report,null,2));
+  else {
+    console.log(`${report.errors} structural errors; ${report.review_items} editorial review items. ${report.claims_with_sources}/${report.claims} dated claims have direct sources; ${report.wikipedia_extracts} cached extracts.`);
+    for (const i of report.issues.filter(i=>i.severity==='error')) console.error(`${i.collection}/${i.id} [${i.code}]: ${i.message}`);
+    if (report.review_items) console.log('Use npm run report:data for the complete per-record review queue. Passing validation does not certify historical accuracy.');
   }
-  return ids;
+  process.exitCode = report.errors || (process.argv.includes('--strict') && report.review_items) ? 1 : 0;
 }
-
-function validRange(name, item) {
-  if (!Number.isInteger(item.start) || !Number.isInteger(item.end)) {
-    fail(`${name} ${item.id}: start and end must be integer years`);
-    return;
-  }
-  if (item.start > item.end) fail(`${name} ${item.id}: start is after end`);
-  if (item.start === 0 || item.end === 0) fail(`${name} ${item.id}: year zero is not allowed`);
-  if (item.start < data.meta.start_year || item.end > data.meta.end_year) {
-    fail(`${name} ${item.id}: date range falls outside project bounds`);
-  }
-}
-
-const sourceIds = uniqueIds('sources', data.sources);
-const houseIds = uniqueIds('houses', data.houses);
-const polityIds = uniqueIds('polities', data.polities);
-const phaseIds = uniqueIds('phases', data.phases);
-const ruleIds = uniqueIds('rules', data.rules);
-const personIds = uniqueIds('persons', data.persons);
-const reignIds = uniqueIds('reigns', data.reigns);
-const relationshipIds = uniqueIds('relationships', data.relationships);
-const eventIds = uniqueIds('events', data.events);
-const presetIds = uniqueIds('presets', data.presets);
-
-void phaseIds;
-void ruleIds;
-void reignIds;
-void relationshipIds;
-void eventIds;
-void presetIds;
-
-for (const source of data.sources) {
-  try {
-    const url = new URL(source.url);
-    if (url.protocol !== 'https:') fail(`source ${source.id}: URL must use HTTPS`);
-  } catch {
-    fail(`source ${source.id}: invalid URL`);
-  }
-}
-
-for (const polity of data.polities) {
-  if (!['current', 'former'].includes(polity.status)) {
-    fail(`polity ${polity.id}: invalid status ${polity.status}`);
-  }
-  if (![1, 2].includes(polity.tier)) fail(`polity ${polity.id}: invalid tier`);
-  if (!polity.region) fail(`polity ${polity.id}: missing region`);
-  if (!polity.sources?.length) fail(`polity ${polity.id}: missing sources`);
-  for (const sourceId of polity.sources || []) {
-    if (!sourceIds.has(sourceId)) fail(`polity ${polity.id}: unknown source ${sourceId}`);
-  }
-  if (!data.phases.some((phase) => phase.polity_id === polity.id)) {
-    fail(`polity ${polity.id}: missing institutional phase`);
-  }
-  if (polity.status === 'current' && !data.phases.some(
-    (phase) => phase.polity_id === polity.id && phase.end === data.meta.end_year
-  )) {
-    fail(`polity ${polity.id}: current polity lacks an open phase`);
-  }
-}
-
-for (const phase of data.phases) {
-  validRange('phase', phase);
-  if (!polityIds.has(phase.polity_id)) fail(`phase ${phase.id}: unknown polity`);
-}
-
-function intersectsPhase(item) {
-  return data.phases.some((phase) =>
-    phase.polity_id === item.polity_id && item.start <= phase.end && item.end >= phase.start
-  );
-}
-
-for (const rule of data.rules) {
-  validRange('rule', rule);
-  if (!polityIds.has(rule.polity_id)) fail(`rule ${rule.id}: unknown polity`);
-  if (!houseIds.has(rule.house_id)) fail(`rule ${rule.id}: unknown house`);
-  if (!intersectsPhase(rule)) fail(`rule ${rule.id}: does not intersect a polity phase`);
-}
-
-for (const person of data.persons) {
-  if (!person.name) fail(`person ${person.id}: missing name`);
-  try {
-    const url = new URL(person.url);
-    if (url.protocol !== 'https:') fail(`person ${person.id}: URL must use HTTPS`);
-  } catch {
-    fail(`person ${person.id}: invalid URL`);
-  }
-}
-
-for (const reign of data.reigns) {
-  validRange('reign', reign);
-  if (!personIds.has(reign.person_id)) fail(`reign ${reign.id}: unknown person`);
-  if (!polityIds.has(reign.polity_id)) fail(`reign ${reign.id}: unknown polity`);
-  if (reign.house_id && !houseIds.has(reign.house_id)) fail(`reign ${reign.id}: unknown house`);
-  if (!intersectsPhase(reign)) fail(`reign ${reign.id}: does not intersect a polity phase`);
-  if (![1, 2, 3].includes(reign.importance)) fail(`reign ${reign.id}: invalid importance`);
-}
-
-const relationshipTypes = new Set([
-  'continuity', 'conquest', 'dissolution', 'dynastic_union',
-  'partition', 'personal_union', 'restoration', 'state_union'
-]);
-for (const relationship of data.relationships) {
-  if (!relationshipTypes.has(relationship.type)) {
-    fail(`relationship ${relationship.id}: invalid type ${relationship.type}`);
-  }
-  if (!Number.isInteger(relationship.start)) {
-    fail(`relationship ${relationship.id}: invalid start year`);
-  }
-  if (relationship.start === 0 || relationship.end === 0) {
-    fail(`relationship ${relationship.id}: year zero is not allowed`);
-  }
-  if (relationship.end !== undefined && relationship.end < relationship.start) {
-    fail(`relationship ${relationship.id}: end is before start`);
-  }
-  for (const polityId of [...relationship.from, ...relationship.to]) {
-    if (!polityIds.has(polityId)) fail(`relationship ${relationship.id}: unknown polity ${polityId}`);
-  }
-  for (const sourceId of relationship.sources || []) {
-    if (!sourceIds.has(sourceId)) fail(`relationship ${relationship.id}: unknown source ${sourceId}`);
-  }
-}
-
-for (const event of data.events) {
-  if (!Number.isInteger(event.year)) fail(`event ${event.id}: invalid year`);
-  if (event.year === 0) fail(`event ${event.id}: year zero is not allowed`);
-  for (const polityId of event.polity_ids) {
-    if (!polityIds.has(polityId)) fail(`event ${event.id}: unknown polity ${polityId}`);
-  }
-  for (const sourceId of event.sources || []) {
-    if (!sourceIds.has(sourceId)) fail(`event ${event.id}: unknown source ${sourceId}`);
-  }
-}
-
-const requiredCurrentMonarchies = new Set([
-  'andorra', 'belgium', 'denmark', 'liechtenstein', 'luxembourg', 'monaco',
-  'netherlands', 'norway', 'papal-vatican', 'spain', 'sweden', 'united-kingdom'
-]);
-for (const polityId of requiredCurrentMonarchies) {
-  const polity = data.polities.find((item) => item.id === polityId);
-  if (!polity || polity.status !== 'current') {
-    fail(`scope: missing current European monarchy ${polityId}`);
-  }
-}
-
-const referencedPeople = new Set(data.reigns.map((reign) => reign.person_id));
-for (const person of data.persons) {
-  if (!referencedPeople.has(person.id)) fail(`person ${person.id}: has no reign`);
-}
-
-if (data.polities.length < 35) fail('scope: expected at least 35 polity lanes');
-if (data.reigns.length < 150) fail('scope: expected at least 150 curated reigns');
-if (data.relationships.length < 25) fail('scope: expected at least 25 typed relationships');
-
-if (errors.length) {
-  console.error(`Data validation failed with ${errors.length} error(s):`);
-  for (const error of errors) console.error(`- ${error}`);
-  process.exit(1);
-}
-
-console.log(
-  `Validated ${data.polities.length} polities, ${data.phases.length} phases, ` +
-  `${data.rules.length} house-rule segments, ${data.reigns.length} reigns, ` +
-  `${data.relationships.length} relationships and ${data.events.length} events.`
-);
+module.exports = { validateData };

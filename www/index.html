@@ -3,91 +3,57 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="An interactive, source-backed timeline of major European monarchies from Augustus to the present.">
+  <meta name="description" content="Explore European monarchies and their rulers from 27 BCE to 2026.">
   <meta name="theme-color" content="#fffdf9">
   <title>The Braided Crowns of Europe</title>
-  <link rel="stylesheet" href="assets/styles.css">
+  <link rel="icon" href="assets/crown.svg" type="image/svg+xml"><link rel="stylesheet" href="assets/styles.css?v=20260905e">
 </head>
 <body>
   <a class="skip-link" href="#timeline-heading">Skip to the timeline</a>
 
   <header class="site-header">
-    <a class="wordmark" href="index.html">Braided Crowns</a>
+    <h1 class="site-title"><a class="wordmark" href="index.html"><img src="assets/crown.svg" width="36" height="32" alt=""><span>The Braided Crowns of Europe</span></a></h1>
     <nav aria-label="Primary navigation">
       <a aria-current="page" href="index.html">Explore</a>
       <a href="methodology.html">Methodology</a>
       <a href="blog.html">Essay</a>
+      <a href="quality.html">Data quality</a>
     </nav>
   </header>
 
   <main>
-    <section class="hero" aria-labelledby="page-title">
-      <p class="eyebrow">27 BCE–2026 CE</p>
-      <h1 id="page-title">The Braided Crowns of Europe</h1>
-      <p class="hero-copy">A time-aligned view of the kingdoms, empires, dynasties and personal unions that shaped Europe. Follow a realm across the centuries, trace one house across several crowns, or stop at a single year to see who ruled at the same moment.</p>
-      <div class="hero-meta" aria-label="Dataset summary">
-        <span><strong id="polity-count">45</strong> polity lanes</span>
-        <span><strong id="reign-count">187</strong> curated reigns</span>
-        <span><strong id="current-count">12</strong> surviving monarchies</span>
-      </div>
-    </section>
-
-    <section class="explorer" aria-labelledby="timeline-heading">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">Interactive overview</p>
-          <h2 id="timeline-heading">Two thousand years on one axis</h2>
-        </div>
-        <p>Bars show political phases; inset bands show ruling houses; dots mark selected reigns. Connectors distinguish unions, partitions, conquests, restorations and dissolutions without using width to imply power.</p>
+    <section class="explorer" id="timeline-heading" aria-label="Timeline" tabindex="-1">
+      <div class="explore-toolbar">
+        <search class="search-control">
+          <label for="search">Jump to a monarch, dynasty, country or region</label>
+          <input id="search" type="search" placeholder="Search names and places" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="search-results">
+          <div id="search-panel" class="search-panel" hidden>
+            <ul id="search-results" role="listbox" aria-label="Places on the timeline"></ul>
+            <p id="search-status" role="status"></p>
+          </div>
+        </search>
+        <label class="zoom-control">Zoom
+          <select id="zoom"><option value="1">Overview</option><option value="2">2×</option><option value="4">4×</option></select>
+        </label>
       </div>
 
-      <form class="controls" id="timeline-controls">
-        <label>
-          Region
-          <select id="region-filter" name="region">
-            <option value="all">All regions</option>
-          </select>
-        </label>
-        <label>
-          Coverage
-          <select id="coverage-filter" name="coverage">
-            <option value="core-current">Core + surviving</option>
-            <option value="core">Core only</option>
-            <option value="all">All included realms</option>
-          </select>
-        </label>
-        <label>
-          Status
-          <select id="status-filter" name="status">
-            <option value="all">Current and former</option>
-            <option value="current">Current only</option>
-            <option value="former">Former only</option>
-          </select>
-        </label>
-        <label>
-          Highlight a house
-          <select id="house-filter" name="house">
-            <option value="all">All ruling houses</option>
-          </select>
-        </label>
-        <label class="check-control">
-          <input id="relationship-toggle" type="checkbox" checked>
-          <span>Show crown connections</span>
-        </label>
-      </form>
-
-      <div class="story-jumps" aria-label="Jump to a pivotal year">
-        <span>Story dates</span>
+      <div class="story-jumps" aria-label="Jump to a year">
+        <span>Jump to</span>
         <div id="preset-buttons"></div>
       </div>
 
       <div class="snapshot-control">
         <label for="snapshot-year">Europe in <output id="snapshot-year-output" for="snapshot-year">1519</output></label>
-        <input id="snapshot-year" type="range" min="-27" max="2026" value="1519" step="1">
+        <label class="year-entry">Enter a year <input id="year-input" type="number" step="1" value="1519" aria-describedby="year-help"></label>
+        <input id="snapshot-year" type="range" value="1519" step="1">
         <p id="snapshot-summary" aria-live="polite"></p>
       </div>
 
+      <p id="year-help" class="status-line">Use negative years for BCE. Includes rulers who began or ended a reign during that year.</p>
+
       <div id="timeline-error" class="error-message" role="alert" hidden></div>
+
+      <p class="status-line">Bars show periods of monarchy, colours show ruling houses, and dots show rulers.</p>
 
       <div class="desktop-timeline" id="desktop-timeline" aria-label="Horizontal timeline of European monarchies">
         <div class="sticky-ruler" aria-hidden="true">
@@ -108,17 +74,33 @@
         </div>
       </div>
 
-      <div class="mobile-timeline" id="mobile-timeline">
-        <label for="mobile-polity-select">Focus on a monarchy</label>
+      <div class="mobile-timeline">
+        <label for="mobile-polity-select">Monarchy</label>
         <select id="mobile-polity-select"></select>
-        <div class="vertical-chart" id="vertical-chart" role="group" aria-label="Vertical focused timeline"></div>
+        <div class="vertical-chart" id="vertical-chart" role="group" tabindex="-1" aria-label="Vertical focused timeline"></div>
       </div>
 
-      <div class="legend" aria-label="Relationship legend">
-        <span><i class="legend-line personal"></i>Personal or dynastic union</span>
-        <span><i class="legend-line state"></i>State union or continuity</span>
-        <span><i class="legend-line rupture"></i>Partition, conquest or dissolution</span>
-        <span><i class="legend-dot"></i>Selected monarch</span>
+      <div class="legend" aria-label="Timeline legend">
+        <div class="legend-group">
+          <strong class="legend-heading">Lines</strong>
+          <span><i class="legend-line personal" aria-hidden="true"></i>Shared rule (sometimes interrupted)</span>
+          <span><i class="legend-line state" aria-hidden="true"></i>Union or continuation</span>
+          <span><i class="legend-line rupture" aria-hidden="true"></i>Division, conquest or end</span>
+        </div>
+        <div class="legend-group">
+          <strong class="legend-heading">Symbols</strong>
+          <span><i class="legend-marker" aria-hidden="true">◇</i>Union</span>
+          <span><i class="legend-marker" aria-hidden="true">+</i>State union</span>
+          <span><i class="legend-marker" aria-hidden="true">→</i>Continuity</span>
+          <span><i class="legend-marker" aria-hidden="true">↗</i>Partition</span>
+          <span><i class="legend-marker" aria-hidden="true">×</i>Conquest or dissolution</span>
+          <span><i class="legend-marker" aria-hidden="true">↺</i>Restoration</span>
+          <span><i class="legend-marker" aria-hidden="true">↔</i>Reorganization</span>
+        </div>
+        <div class="legend-group">
+          <strong class="legend-heading">Reigns</strong>
+          <span><i class="legend-dot" aria-hidden="true"></i>Ruler</span>
+        </div>
       </div>
 
       <button class="detail-toggle" id="detail-toggle" type="button" aria-controls="detail-panel" aria-expanded="false">
@@ -126,41 +108,38 @@
         <strong id="detail-toggle-title">Europe in 1519</strong>
       </button>
 
-      <aside class="detail-panel" id="detail-panel" aria-live="polite" aria-labelledby="detail-title" aria-hidden="true" inert>
+      <dialog class="detail-panel" id="detail-panel" aria-live="polite" aria-labelledby="detail-title" aria-hidden="true" inert>
         <div class="detail-panel-toolbar">
           <p class="detail-type" id="detail-type">Snapshot</p>
           <button class="detail-close" id="detail-close" type="button" aria-label="Close details">Close</button>
         </div>
         <div class="detail-primary">
-          <h3 id="detail-title">Europe in 1519</h3>
+          <h3 id="detail-title" tabindex="-1" autofocus>Europe in 1519</h3>
           <p class="detail-dates" id="detail-dates"></p>
-          <p id="detail-copy">Move the year control or choose a story date to compare contemporary monarchies.</p>
+          <p id="detail-copy">Choose a year to compare rulers.</p>
+          <section id="detail-wikipedia" class="wikipedia-context"></section>
+          <section id="detail-evidence" class="detail-evidence"></section>
         </div>
         <div class="detail-secondary">
-          <h4 id="detail-secondary-title">Notable rulers</h4>
+          <h4 id="detail-secondary-title">Rulers</h4>
           <ul id="detail-list"></ul>
-          <div class="source-links" id="detail-sources"></div>
+          <div id="detail-related"></div>
+          <details class="background-sources"><summary>Background reading</summary><div class="source-links" id="detail-sources"></div></details>
         </div>
-      </aside>
+      </dialog>
     </section>
 
-    <section class="reading-path" aria-labelledby="reading-title">
-      <p class="eyebrow">Read the argument</p>
-      <h2 id="reading-title">A chart is also an editorial decision</h2>
-      <p>The dates, names and lines in this project are interpretations—not claims that medieval Europe behaved like a modern map. The methodology explains how the scope was chosen, why the chart is not a Sankey, and how disputed transitions are recorded.</p>
-      <div class="reading-links">
-        <a href="methodology.html">Read the methodology <span aria-hidden="true">→</span></a>
-        <a href="blog.html">Read the accompanying essay <span aria-hidden="true">→</span></a>
-      </div>
-    </section>
   </main>
 
   <footer>
-    <p>Data and code are published under the MIT License. Historical references are linked from every selected item.</p>
-    <p><a href="https://github.com/danielpradilla/european-monarchies-timeline">View the project on GitHub</a></p>
+    <p>Code and original content: MIT. Wikipedia excerpts: CC BY-SA 4.0.</p>
+    <p><a href="https://github.com/danielpradilla/european-monarchies-timeline">GitHub</a></p>
   </footer>
 
-  <script src="data/timeline-data.js" defer></script>
-  <script src="assets/app.js" defer></script>
+  <div id="relationship-tooltip" class="relationship-tooltip" role="tooltip" popover="manual"></div>
+  <noscript><p class="error-message">Enable JavaScript to explore the timeline. The methodology, essay and data-quality report are available without it.</p></noscript>
+  <script src="assets/timeline-core.js?v=20260905e" defer></script>
+  <script src="data/timeline-data.js?v=20260905" defer></script>
+  <script src="assets/app.js?v=20260905e" defer></script>
 </body>
 </html>

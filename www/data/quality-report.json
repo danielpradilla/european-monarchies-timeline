@@ -1,0 +1,22 @@
+{
+  "snapshot": "2026-09-05",
+  "counts": {
+    "sources": 390,
+    "houses": 92,
+    "polities": 53,
+    "phases": 96,
+    "rules": 215,
+    "persons": 178,
+    "reigns": 209,
+    "relationships": 44,
+    "events": 29,
+    "presets": 7
+  },
+  "errors": 0,
+  "review_items": 0,
+  "issues": [],
+  "claims": 520,
+  "claims_with_sources": 520,
+  "claims_with_specialist_sources": 61,
+  "wikipedia_extracts": 269
+}

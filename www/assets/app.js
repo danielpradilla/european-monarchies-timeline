@@ -1,6 +1,3 @@
-const DATA_URL = 'data/timeline.json';
-const CHART_START = -27;
-const CHART_END = 2026;
 const PIXELS_PER_YEAR = 1.35;
 const ROW_HEIGHT = 62;
 const REGION_HEIGHT = 34;
@@ -10,14 +7,14 @@ const MOBILE_MARGIN = 34;
 
 const REGION_ORDER = [
   'Mediterranean',
+  'Southeast Europe',
   'Western Europe',
   'Britain and Ireland',
   'Iberia',
   'Nordics',
   'Central Europe',
   'Central and Eastern Europe',
-  'Italian states',
-  'Southeast Europe'
+  'Italian states'
 ];
 
 const HOUSE_PALETTE = [
@@ -25,42 +22,30 @@ const HOUSE_PALETTE = [
   '#3f6d68', '#864f64', '#5c5f9a', '#8a6939', '#3e6b50', '#765b43'
 ];
 
-const RELATION_SYMBOLS = {
-  continuity: '→',
-  conquest: '×',
-  dissolution: '×',
-  dynastic_union: '◇',
-  partition: '↗',
-  personal_union: '◇',
-  restoration: '↺',
-  state_union: '+'
-};
+const RELATION_SYMBOLS = Object.fromEntries(Object.entries(TimelineCore.relationshipTypes).map(([key, value]) => [key, value[0]]));
 
 const state = {
-  data: null,
-  region: 'all',
-  coverage: 'core-current',
-  status: 'all',
-  house: 'all',
-  showRelationships: true,
+  data: window.TIMELINE_DATA,
+  zoom: 1,
   snapshotYear: 1519,
   selected: null,
-  visiblePolities: [],
+  polities: [],
   layout: [],
-  plotWidth: Math.round((CHART_END - CHART_START) * PIXELS_PER_YEAR),
+  plotWidth: 0,
   plotHeight: 0,
   mobilePolityId: 'france'
 };
 
 const elements = {
-  polityCount: document.getElementById('polity-count'),
-  reignCount: document.getElementById('reign-count'),
-  currentCount: document.getElementById('current-count'),
-  regionFilter: document.getElementById('region-filter'),
-  coverageFilter: document.getElementById('coverage-filter'),
-  statusFilter: document.getElementById('status-filter'),
-  houseFilter: document.getElementById('house-filter'),
-  relationshipToggle: document.getElementById('relationship-toggle'),
+  search: document.getElementById('search'),
+  searchPanel: document.getElementById('search-panel'),
+  searchResults: document.getElementById('search-results'),
+  searchStatus: document.getElementById('search-status'),
+  yearInput: document.getElementById('year-input'),
+  zoom: document.getElementById('zoom'),
+  detailWikipedia: document.getElementById('detail-wikipedia'),
+  detailEvidence: document.getElementById('detail-evidence'),
+  detailRelated: document.getElementById('detail-related'),
   presetButtons: document.getElementById('preset-buttons'),
   snapshotYear: document.getElementById('snapshot-year'),
   snapshotYearOutput: document.getElementById('snapshot-year-output'),
@@ -75,6 +60,7 @@ const elements = {
   laneLayer: document.getElementById('lane-layer'),
   relationshipLayer: document.getElementById('relationship-layer'),
   relationshipControlsLayer: document.getElementById('relationship-controls-layer'),
+  relationshipTooltip: document.getElementById('relationship-tooltip'),
   crosshair: document.getElementById('crosshair'),
   mobilePolitySelect: document.getElementById('mobile-polity-select'),
   verticalChart: document.getElementById('vertical-chart'),
@@ -91,21 +77,32 @@ const elements = {
   detailSources: document.getElementById('detail-sources')
 };
 
-const byId = (items, id) => items.find((item) => item.id === id);
+const dataIndex = state.data ? TimelineCore.indexData(state.data) : { ids: {}, byPolity: new Map(), navigation: [] };
+const collectionMaps = new Map(Object.entries(dataIndex.ids).map(([key, map]) => [state.data[key], map]));
+const byId = (items, id) => collectionMaps.get(items)?.get(id);
+const recordsFor = (polityId, key) => dataIndex.byPolity.get(polityId)?.[key] || [];
+const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const scrollBehavior = () => reducedMotion() ? 'auto' : 'smooth';
 
-function formatYear(year) {
-  if (year < 0) return `${Math.abs(year)} BCE`;
-  if (year === 0) return '1 CE';
-  return `${year} CE`;
+function formatYear(year) { return TimelineCore.formatYear(year); }
+
+function formatRange(start, end) { return TimelineCore.formatRange(start, end); }
+
+function chartStart() {
+  return state.data.meta.start_year;
 }
 
-function formatRange(start, end) {
-  if (start === end) return formatYear(start);
-  return `${formatYear(start)}–${formatYear(end)}`;
+function chartEnd() {
+  return state.data.meta.end_year;
+}
+
+function effectiveEnd(item) {
+  return item.end === null ? chartEnd() : item.end;
 }
 
 function xForYear(year) {
-  return ((year - CHART_START) / (CHART_END - CHART_START)) * state.plotWidth;
+  const position = TimelineCore.yearPosition;
+  return ((position(year) - position(chartStart())) / (position(chartEnd()) - position(chartStart()))) * state.plotWidth;
 }
 
 function houseColor(houseId) {
@@ -114,50 +111,136 @@ function houseColor(houseId) {
   return HOUSE_PALETTE[Math.abs(hash) % HOUSE_PALETTE.length];
 }
 
-function polityStart(polityId) {
-  return Math.min(...state.data.phases.filter((phase) => phase.polity_id === polityId).map((phase) => phase.start));
-}
+function polityStart(polityId) { return recordsFor(polityId, 'phases')[0]?.start ?? chartEnd(); }
 
 function sourceObjects(sourceIds = []) {
   return sourceIds.map((id) => byId(state.data.sources, id)).filter(Boolean);
 }
 
-function visiblePolities() {
-  return state.data.polities
-    .filter((polity) => state.region === 'all' || polity.region === state.region)
-    .filter((polity) => {
-      if (state.coverage === 'all') return true;
-      if (state.coverage === 'core') return polity.tier === 1;
-      return polity.tier === 1 || polity.status === 'current';
-    })
-    .filter((polity) => state.status === 'all' || polity.status === state.status)
-    .sort((a, b) => {
-      const regionDelta = REGION_ORDER.indexOf(a.region) - REGION_ORDER.indexOf(b.region);
-      if (regionDelta) return regionDelta;
-      return polityStart(a.id) - polityStart(b.id) || a.name.localeCompare(b.name);
-    });
+function addWikipediaSummary(record) {
+  const title = record.wikipedia_title || TimelineCore.wikipediaTitle(record.url);
+  const page = window.WIKIPEDIA_EXTRACTS?.[title];
+  elements.detailWikipedia.replaceChildren();
+  const heading = document.createElement('h4');
+  heading.textContent = page ? `Wikipedia · ${page.title}` : 'Further reading';
+  const copy = document.createElement('p');
+  copy.textContent = page?.text || 'No cached Wikipedia extract is available for this record. The linked references below remain available.';
+  elements.detailWikipedia.append(heading, copy);
+  if (!page) return;
+  const attribution = document.createElement('p');
+  attribution.className = 'attribution';
+  attribution.append('Excerpt from Wikipedia contributors; shortened and pronunciation guides omitted. ');
+  for (const [label, url] of [
+    ['Read the article', page.url],
+    [`Revision ${page.revision_id}`, `https://en.wikipedia.org/w/index.php?oldid=${page.revision_id}`],
+    ['CC BY-SA 4.0', 'https://creativecommons.org/licenses/by-sa/4.0/']
+  ]) {
+    const link = document.createElement('a'); link.href = url; link.textContent = label;
+    link.target = '_blank'; link.rel = 'noreferrer'; attribution.append(link, ' · ');
+  }
+  attribution.append(`Retrieved ${page.retrieved_at}`);
+  elements.detailWikipedia.append(attribution);
 }
 
-function renderFilterOptions() {
-  const regions = [...new Set(state.data.polities.map((polity) => polity.region))]
-    .sort((a, b) => REGION_ORDER.indexOf(a) - REGION_ORDER.indexOf(b));
-  for (const region of regions) {
-    const option = document.createElement('option');
-    option.value = region;
-    option.textContent = region;
-    elements.regionFilter.append(option);
-  }
+function orderedPolities() {
+  return [...state.data.polities].sort((a, b) => {
+    const rank = (region) => REGION_ORDER.includes(region) ? REGION_ORDER.indexOf(region) : REGION_ORDER.length;
+    return rank(a.region) - rank(b.region) || polityStart(a.id) - polityStart(b.id) || a.name.localeCompare(b.name);
+  });
+}
 
-  const usedHouseIds = new Set(state.data.rules.map((rule) => rule.house_id));
-  const houses = state.data.houses
-    .filter((house) => usedHouseIds.has(house.id))
-    .sort((a, b) => a.name.localeCompare(b.name));
-  for (const house of houses) {
-    const option = document.createElement('option');
-    option.value = house.id;
-    option.textContent = house.name;
-    elements.houseFilter.append(option);
+let searchMatches = [];
+let activeSearchIndex = -1;
+function closeSearch() {
+  elements.searchPanel.hidden = true;
+  elements.search.setAttribute('aria-expanded', 'false');
+  elements.search.removeAttribute('aria-activedescendant');
+}
+function renderSearch() {
+  searchMatches = TimelineCore.searchEntries(dataIndex, elements.search.value);
+  activeSearchIndex = -1;
+  elements.searchResults.replaceChildren();
+  elements.search.removeAttribute('aria-activedescendant');
+  if (!elements.search.value.trim()) { closeSearch(); return; }
+  for (const [index, result] of searchMatches.entries()) {
+    const option = document.createElement('li');
+    option.id = `search-option-${index}`;
+    option.setAttribute('role', 'option');
+    option.setAttribute('aria-selected', 'false');
+    const name = document.createElement('strong'), context = document.createElement('span');
+    name.textContent = result.label;
+    context.textContent = result.context;
+    option.append(name, context);
+    option.addEventListener('click', () => jumpToResult(result));
+    elements.searchResults.append(option);
   }
+  elements.searchStatus.textContent = searchMatches.length ? `${searchMatches.length} matches.` : 'No matches. Try another name or place.';
+  elements.searchStatus.className = searchMatches.length ? 'sr-only' : '';
+  elements.searchPanel.hidden = false;
+  elements.search.setAttribute('aria-expanded', 'true');
+}
+function bindSearch() {
+  elements.search.addEventListener('input', renderSearch);
+  elements.search.addEventListener('focus', renderSearch);
+  elements.search.addEventListener('keydown', event => {
+    if (event.isComposing) return;
+    if (event.key === 'Escape') { closeSearch(); event.stopPropagation(); return; }
+    if (event.key === 'Tab') { closeSearch(); return; }
+    if (!['ArrowDown', 'ArrowUp', 'Enter'].includes(event.key)) return;
+    event.preventDefault();
+    if (elements.searchPanel.hidden) renderSearch();
+    if (!searchMatches.length) return;
+    if (event.key === 'Enter') { jumpToResult(searchMatches[Math.max(0, activeSearchIndex)]); return; }
+    const direction = event.key === 'ArrowDown' ? 1 : -1;
+    activeSearchIndex = activeSearchIndex < 0 ? (direction > 0 ? 0 : searchMatches.length - 1)
+      : (activeSearchIndex + direction + searchMatches.length) % searchMatches.length;
+    [...elements.searchResults.children].forEach((option, index) => option.setAttribute('aria-selected', String(index === activeSearchIndex)));
+    const option = elements.searchResults.children[activeSearchIndex];
+    elements.search.setAttribute('aria-activedescendant', option.id);
+    option.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+  });
+  document.addEventListener('pointerdown', event => {
+    if (!event.target.closest('.search-control')) closeSearch();
+  });
+}
+
+function jumpToResult(result, openDetails = false) {
+  if (!openRecord(result.type, result.id, false)) return false;
+  const collection = { reign: 'reigns', rule: 'rules', phase: 'phases', event: 'events', relationship: 'relationships' }[result.type];
+  const record = result.type === 'house' ? rulesForHouse(result.id)[0] : dataIndex.ids[collection]?.get(result.id);
+  const polityId = result.type === 'polity' ? result.id : result.type === 'region'
+    ? state.polities.find(p => p.region === result.id)?.id : record?.polity_id || record?.from?.[0] || record?.to?.[0] || record?.polity_ids?.[0];
+  if (!polityId) return false;
+  state.mobilePolityId = polityId;
+  elements.mobilePolitySelect.value = polityId;
+  renderVerticalFocus();
+  const phases = recordsFor(polityId, 'phases');
+  const year = record?.start ?? record?.year ?? (result.type === 'region' || phases.some(p => TimelineCore.activeDuring(p, state.snapshotYear, state.data.meta)) ? state.snapshotYear : phases[0].start);
+  state.snapshotYear = year;
+  updateCrosshair();
+  for (const button of elements.presetButtons.children) button.setAttribute('aria-pressed', String(Number(button.dataset.year) === year));
+  const mobile = window.matchMedia('(max-width: 760px)').matches;
+  const chart = mobile ? elements.verticalChart : elements.laneLayer;
+  const attribute = { reign: 'reignId', rule: 'ruleId', house: 'ruleId', phase: 'phaseId' }[result.type];
+  let target = attribute ? [...chart.querySelectorAll('button')].find(button => button.dataset[attribute] === record?.id) : null;
+  if (!target && !mobile) target = result.type === 'region'
+    ? [...elements.labelColumn.querySelectorAll('[data-region]')].find(item => item.dataset.region === result.id)
+    : [...elements.labelColumn.querySelectorAll('button')].find(button => button.dataset.polityId === polityId);
+  target ||= elements.verticalChart;
+  for (const previous of document.querySelectorAll('.search-match')) previous.classList.remove('search-match');
+  target.classList.add('search-match');
+  target.focus({ preventScroll: true });
+  if (!mobile) elements.plotScroller.scrollTo({
+    left: Math.max(0, xForYear(record?.start !== undefined ? (record.start + (record.end === undefined ? record.start : effectiveEnd(record))) / 2 : year) - elements.plotScroller.clientWidth / 2),
+    behavior: scrollBehavior()
+  });
+  const rect = target.getBoundingClientRect();
+  window.scrollTo({ top: Math.max(0, window.scrollY + rect.top + rect.height / 2 - (window.innerHeight + 90) / 2), behavior: scrollBehavior() });
+  elements.search.value = result.label || (result.type === 'region' ? result.id : elements.detailTitle.textContent);
+  closeSearch();
+  syncUrl();
+  if (openDetails) setDetailOpen(true);
+  return true;
 }
 
 function renderPresetButtons() {
@@ -184,10 +267,10 @@ function buildLayout(polities) {
   for (const polity of polities) {
     if (polity.region !== activeRegion) {
       activeRegion = polity.region;
-      layout.push({ type: 'region', region: activeRegion, top, height: REGION_HEIGHT });
+      layout.push({ type: 'region', region: activeRegion, top });
       top += REGION_HEIGHT;
     }
-    layout.push({ type: 'polity', polity, top, height: ROW_HEIGHT });
+    layout.push({ type: 'polity', polity, top });
     top += ROW_HEIGHT;
   }
   state.plotHeight = top;
@@ -197,9 +280,12 @@ function buildLayout(polities) {
 function renderAxisInto(container) {
   container.replaceChildren();
   container.style.width = `${state.plotWidth}px`;
-  const ticks = [CHART_START];
-  for (let year = 200; year <= 2000; year += 200) ticks.push(year);
-  ticks.push(CHART_END);
+  const ticks = [chartStart()];
+  const tickStep = state.zoom >= 4 ? 50 : state.zoom >= 2 ? 100 : 200;
+  for (let year = Math.ceil(chartStart() / tickStep) * tickStep; year < chartEnd(); year += tickStep) {
+    if (year !== 0 && year !== chartStart()) ticks.push(year);
+  }
+  if (chartEnd() !== chartStart()) ticks.push(chartEnd());
   for (const year of ticks) {
     const tick = document.createElement('div');
     tick.className = 'axis-tick';
@@ -229,6 +315,8 @@ function renderLabelColumn() {
       const region = document.createElement('div');
       region.className = 'label-region';
       region.textContent = item.region;
+      region.dataset.region = item.region;
+      region.tabIndex = -1;
       elements.labelColumn.append(region);
       continue;
     }
@@ -269,7 +357,6 @@ function renderLaneLayer() {
   elements.laneLayer.replaceChildren();
   elements.laneLayer.style.width = `${state.plotWidth}px`;
   elements.laneLayer.style.height = `${state.plotHeight}px`;
-  elements.plotCanvas.classList.toggle('house-filtering', state.house !== 'all');
 
   for (const item of state.layout) {
     if (item.type === 'region') {
@@ -286,27 +373,30 @@ function renderLaneLayer() {
     row.dataset.polityId = polity.id;
     row.style.top = `${item.top}px`;
 
-    const phases = state.data.phases.filter((phase) => phase.polity_id === polity.id);
+    const phases = recordsFor(polity.id, 'phases');
     for (const phase of phases) {
+      const end = effectiveEnd(phase);
       const phaseButton = elementButton(
-        `phase-segment${phase.end === state.data.meta.end_year ? ' current' : ''}`,
+        `phase-segment${phase.end === null ? ' current' : ''}`,
         `${phase.name}, ${formatRange(phase.start, phase.end)}`,
         () => showPhaseDetail(phase.id)
       );
       phaseButton.style.left = `${xForYear(phase.start)}px`;
-      phaseButton.style.width = `${Math.max(3, xForYear(phase.end) - xForYear(phase.start))}px`;
+      phaseButton.dataset.phaseId = phase.id;
+      phaseButton.style.width = `${Math.max(3, xForYear(end) - xForYear(phase.start))}px`;
       row.append(phaseButton);
     }
 
-    const rules = state.data.rules.filter((rule) => rule.polity_id === polity.id);
+    const rules = recordsFor(polity.id, 'rules');
     for (const rule of rules) {
       const house = byId(state.data.houses, rule.house_id);
-      const width = Math.max(2, xForYear(rule.end) - xForYear(rule.start));
+      const width = Math.max(2, xForYear(effectiveEnd(rule)) - xForYear(rule.start));
       const ruleButton = elementButton(
-        `rule-segment${state.house === rule.house_id ? ' house-match' : ''}`,
+        'rule-segment',
         `${house.name} ruled ${polity.name}, ${formatRange(rule.start, rule.end)}`,
         () => showRuleDetail(rule.id)
       );
+      ruleButton.dataset.ruleId = rule.id;
       ruleButton.dataset.houseId = rule.house_id;
       ruleButton.style.setProperty('--house-color', houseColor(rule.house_id));
       ruleButton.style.left = `${xForYear(rule.start)}px`;
@@ -315,14 +405,12 @@ function renderLaneLayer() {
       row.append(ruleButton);
     }
 
-    const reigns = state.data.reigns
-      .filter((reign) => reign.polity_id === polity.id && reign.importance >= 2)
-      .sort((a, b) => a.start - b.start);
+    const reigns = recordsFor(polity.id, 'reigns');
     const labels = [];
     for (const reign of reigns) {
       const person = byId(state.data.persons, reign.person_id);
       const startX = xForYear(reign.start);
-      const endX = xForYear(reign.end);
+      const endX = xForYear(effectiveEnd(reign));
       const midX = (startX + endX) / 2;
 
       const duration = document.createElement('span');
@@ -337,6 +425,7 @@ function renderLaneLayer() {
         `${person.name}, ${reign.title}, ${formatRange(reign.start, reign.end)}`,
         () => showReignDetail(reign.id)
       );
+      mark.dataset.reignId = reign.id;
       mark.style.left = `${midX}px`;
       row.append(mark);
 
@@ -362,10 +451,42 @@ function average(values) {
   return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
+let relationshipPreviewTimer;
+function hideRelationshipPreview() {
+  clearTimeout(relationshipPreviewTimer);
+  elements.relationshipTooltip.hidePopover();
+}
+function bindRelationshipPreview(target, relationship) {
+  const show = event => {
+    if (event.pointerType === 'touch') return;
+    clearTimeout(relationshipPreviewTimer);
+    const tip = elements.relationshipTooltip;
+    tip.textContent = `${TimelineCore.relationshipTypes[relationship.type][1]} · ${formatRange(relationship.start, relationship.end ?? relationship.start)}\n${relationship.label}\n\n${relationship.description}`;
+    tip.showPopover();
+    const rect = target.getBoundingClientRect();
+    const x = event.clientX ?? rect.left + rect.width / 2;
+    const y = event.clientY ?? rect.bottom;
+    tip.style.left = `${Math.max(12, Math.min(x, window.innerWidth - tip.offsetWidth - 12))}px`;
+    tip.style.top = `${Math.max(12, y + tip.offsetHeight + 24 <= window.innerHeight ? y + 12 : y - tip.offsetHeight - 12)}px`;
+  };
+  target.addEventListener('pointerenter', show);
+  target.addEventListener('focus', event => {
+    target.scrollIntoView({ behavior: 'instant', block: 'nearest', inline: 'nearest' });
+    requestAnimationFrame(() => {
+      if (document.activeElement === target) show(event);
+    });
+  });
+  for (const event of ['pointerleave', 'blur']) target.addEventListener(event, () => {
+    clearTimeout(relationshipPreviewTimer);
+    if (document.activeElement === target) return;
+    relationshipPreviewTimer = setTimeout(hideRelationshipPreview, 150);
+  });
+}
+
 function renderRelationships() {
+  hideRelationshipPreview();
   elements.relationshipLayer.replaceChildren();
   elements.relationshipControlsLayer.replaceChildren();
-  elements.desktopTimeline.classList.toggle('relationships-hidden', !state.showRelationships);
   elements.relationshipLayer.setAttribute('width', String(state.plotWidth));
   elements.relationshipLayer.setAttribute('height', String(state.plotHeight));
   elements.relationshipLayer.setAttribute('viewBox', `0 0 ${state.plotWidth} ${state.plotHeight}`);
@@ -377,43 +498,47 @@ function renderRelationships() {
       .filter((item) => item.type === 'polity')
       .map((item) => [item.polity.id, item.top + ROW_HEIGHT / 2])
   );
-  const visibleIds = new Set(yByPolity.keys());
   const namespace = 'http://www.w3.org/2000/svg';
 
   for (const relationship of state.data.relationships) {
-    const fromIds = relationship.from.filter((id) => visibleIds.has(id));
-    const toIds = relationship.to.filter((id) => visibleIds.has(id));
-    if (!fromIds.length && !toIds.length) continue;
-    if (!fromIds.length || !toIds.length) continue;
-
-    const fromY = average(fromIds.map((id) => yByPolity.get(id)));
-    const toY = average(toIds.map((id) => yByPolity.get(id)));
+    const endpointIds = [...new Set([...relationship.from, ...relationship.to])];
+    const ys = endpointIds.map((id) => yByPolity.get(id));
+    const markerY = average(ys);
     const x = xForYear(relationship.start);
-    const path = document.createElementNS(namespace, 'path');
-    path.setAttribute('class', relationship.type);
-    if (Math.abs(fromY - toY) < 2) {
-      path.setAttribute('d', `M ${x - 14} ${fromY} C ${x - 38} ${fromY - 28}, ${x + 38} ${toY - 28}, ${x + 14} ${toY}`);
-    } else {
-      const bend = Math.min(42, Math.max(18, Math.abs(toY - fromY) / 5));
-      path.setAttribute('d', `M ${x} ${fromY} C ${x + bend} ${fromY}, ${x - bend} ${toY}, ${x} ${toY}`);
+    const group = document.createElementNS(namespace, 'g');
+    group.dataset.relationshipId = relationship.id;
+    bindRelationshipPreview(group, relationship);
+    group.addEventListener('click', () => { showRelationshipDetail(relationship.id); setDetailOpen(true); });
+    for (const y of ys) {
+      const path = document.createElementNS(namespace, 'path');
+      path.setAttribute('class', relationship.type);
+      path.setAttribute('d', ys.length === 1
+        ? `M ${x - 14} ${y} Q ${x} ${y - 28} ${x + 14} ${y}`
+        : `M ${x} ${y} C ${x + 24} ${y}, ${x + 24} ${markerY}, ${x} ${markerY}`);
+      const hit = path.cloneNode();
+      hit.setAttribute('class', 'relationship-hit');
+      group.append(path, hit);
     }
-    elements.relationshipLayer.append(path);
+    elements.relationshipLayer.append(group);
 
     const button = elementButton(
       'relationship-button',
-      `${relationship.label}, ${formatRange(relationship.start, relationship.end ?? relationship.start)}. ${relationship.description}`,
+      `${relationship.label}, ${formatRange(relationship.start, relationship.end ?? relationship.start)}. ${TimelineCore.relationshipTypes[relationship.type][1]}: ${relationship.description}`,
       () => showRelationshipDetail(relationship.id)
     );
     button.textContent = RELATION_SYMBOLS[relationship.type] || '•';
     button.style.left = `${x}px`;
-    button.style.top = `${(fromY + toY) / 2}px`;
+    button.style.top = `${ys.length === 1 ? markerY - 14 : markerY}px`;
+    bindRelationshipPreview(button, relationship);
+    button.dataset.relationshipId = relationship.id;
     elements.relationshipControlsLayer.append(button);
   }
 }
 
 function renderTimeline() {
-  state.visiblePolities = visiblePolities();
-  state.layout = buildLayout(state.visiblePolities);
+  state.polities = orderedPolities();
+  state.layout = buildLayout(state.polities);
+  state.plotWidth = Math.round((TimelineCore.yearPosition(chartEnd()) - TimelineCore.yearPosition(chartStart())) * PIXELS_PER_YEAR * state.zoom);
   elements.plotCanvas.style.width = `${state.plotWidth}px`;
   elements.plotCanvas.style.height = `${AXIS_HEIGHT + state.plotHeight}px`;
   renderAxis();
@@ -427,43 +552,38 @@ function renderTimeline() {
 function renderMobileSelector() {
   const previous = state.mobilePolityId;
   elements.mobilePolitySelect.replaceChildren();
-  for (const polity of state.visiblePolities) {
-    const option = document.createElement('option');
-    option.value = polity.id;
-    option.textContent = polity.name;
-    elements.mobilePolitySelect.append(option);
-  }
-  if (state.visiblePolities.some((polity) => polity.id === previous)) {
-    state.mobilePolityId = previous;
-  } else {
-    state.mobilePolityId = state.visiblePolities[0]?.id || '';
-  }
+  elements.mobilePolitySelect.append(
+    ...state.polities.map((polity) => new Option(polity.name, polity.id))
+  );
+  state.mobilePolityId = state.polities.some((polity) => polity.id === previous)
+    ? previous
+    : state.polities[0]?.id || '';
   elements.mobilePolitySelect.value = state.mobilePolityId;
   renderVerticalFocus();
 }
 
 function mobileY(year, start, end) {
-  return MOBILE_MARGIN + ((year - start) / Math.max(1, end - start)) * (MOBILE_HEIGHT - MOBILE_MARGIN * 2);
+  const position = TimelineCore.yearPosition;
+  return MOBILE_MARGIN + ((position(year) - position(start)) / Math.max(1, position(end) - position(start))) * (MOBILE_HEIGHT - MOBILE_MARGIN * 2);
 }
 
 function renderVerticalFocus() {
   const polity = byId(state.data.polities, state.mobilePolityId);
   elements.verticalChart.replaceChildren();
   if (!polity) return;
-  elements.verticalChart.classList.toggle('house-filtering', state.house !== 'all');
 
-  const phases = state.data.phases.filter((phase) => phase.polity_id === polity.id);
+  const phases = recordsFor(polity.id, 'phases');
   const start = Math.min(...phases.map((phase) => phase.start));
-  const end = Math.max(...phases.map((phase) => phase.end));
+  const end = Math.max(...phases.map(effectiveEnd));
   elements.verticalChart.setAttribute('aria-label', `${polity.name}, ${formatRange(start, end)}. Vertical timeline with phases, houses and selected monarchs.`);
 
   const axis = document.createElement('div');
   axis.className = 'vertical-axis';
-  const span = end - start;
+  const span = TimelineCore.yearPosition(end) - TimelineCore.yearPosition(start);
   const step = span > 1200 ? 250 : span > 600 ? 100 : span > 250 ? 50 : 25;
   const ticks = [start];
   for (let year = Math.ceil(start / step) * step; year < end; year += step) {
-    if (year > start) ticks.push(year);
+    if (year > start && year !== 0) ticks.push(year);
   }
   ticks.push(end);
   for (const year of ticks) {
@@ -479,7 +599,7 @@ function renderVerticalFocus() {
 
   for (const phase of phases) {
     const top = mobileY(phase.start, start, end);
-    const bottom = mobileY(phase.end, start, end);
+    const bottom = mobileY(effectiveEnd(phase), start, end);
     const button = elementButton(
       'vertical-phase',
       `${phase.name}, ${formatRange(phase.start, phase.end)}`,
@@ -487,37 +607,38 @@ function renderVerticalFocus() {
     );
     button.style.top = `${top}px`;
     button.style.height = `${Math.max(5, bottom - top)}px`;
+    button.dataset.phaseId = phase.id;
     if (bottom - top > 30) button.textContent = phase.name;
     elements.verticalChart.append(button);
   }
 
-  for (const rule of state.data.rules.filter((item) => item.polity_id === polity.id)) {
+  for (const rule of recordsFor(polity.id, 'rules')) {
     const top = mobileY(rule.start, start, end);
-    const bottom = mobileY(rule.end, start, end);
+    const bottom = mobileY(effectiveEnd(rule), start, end);
     const house = byId(state.data.houses, rule.house_id);
     const button = elementButton(
-      `vertical-rule${state.house === rule.house_id ? ' house-match' : ''}`,
+      'vertical-rule',
       `${house.name}, ${formatRange(rule.start, rule.end)}`,
       () => showRuleDetail(rule.id)
     );
+    button.dataset.ruleId = rule.id;
     button.style.setProperty('--house-color', houseColor(rule.house_id));
     button.style.top = `${top}px`;
     button.style.height = `${Math.max(3, bottom - top)}px`;
     elements.verticalChart.append(button);
   }
 
-  const reigns = state.data.reigns
-    .filter((reign) => reign.polity_id === polity.id && reign.importance >= 2)
-    .sort((a, b) => a.start - b.start);
+  const reigns = recordsFor(polity.id, 'reigns');
   let lastLabelY = -Infinity;
   for (const reign of reigns) {
     const person = byId(state.data.persons, reign.person_id);
-    const y = mobileY((reign.start + reign.end) / 2, start, end);
+    const y = (mobileY(reign.start, start, end) + mobileY(effectiveEnd(reign), start, end)) / 2;
     const button = elementButton(
       'vertical-reign',
       `${person.name}, ${reign.title}, ${formatRange(reign.start, reign.end)}`,
       () => showReignDetail(reign.id)
     );
+    button.dataset.reignId = reign.id;
     button.style.top = `${y}px`;
     elements.verticalChart.append(button);
     if (reign.label && reign.importance === 3 && y - lastLabelY >= 25) {
@@ -531,17 +652,7 @@ function renderVerticalFocus() {
   }
 }
 
-function activeAtYear(year) {
-  const visibleIds = new Set(state.visiblePolities.map((polity) => polity.id));
-  const activePhases = state.data.phases.filter(
-    (phase) => visibleIds.has(phase.polity_id) && phase.start <= year && phase.end >= year
-  );
-  const activeIds = new Set(activePhases.map((phase) => phase.polity_id));
-  const activeReigns = state.data.reigns.filter(
-    (reign) => activeIds.has(reign.polity_id) && reign.start <= year && reign.end >= year
-  );
-  return { activePhases, activeIds, activeReigns };
-}
+function activeAtYear(year) { return TimelineCore.snapshot(state.data, dataIndex, state.polities, year); }
 
 function updateCrosshair() {
   const x = xForYear(state.snapshotYear);
@@ -550,241 +661,233 @@ function updateCrosshair() {
   elements.crosshair.querySelector('span').textContent = formatYear(state.snapshotYear);
   elements.snapshotYearOutput.textContent = formatYear(state.snapshotYear);
   elements.snapshotYear.value = String(state.snapshotYear);
+  elements.yearInput.value = String(state.snapshotYear);
+  elements.snapshotYear.setAttribute('aria-valuetext', formatYear(state.snapshotYear));
 
-  const { activeIds, activeReigns } = activeAtYear(state.snapshotYear);
-  const named = activeReigns
-    .filter((reign) => reign.importance === 3)
-    .map((reign) => byId(state.data.persons, reign.person_id)?.name)
-    .filter(Boolean);
-  const uniqueNamed = [...new Set(named)];
-  const namesSummary = uniqueNamed.length ? ` Notable rulers include ${uniqueNamed.slice(0, 4).join(', ')}${uniqueNamed.length > 4 ? ' and others' : ''}.` : '';
-  elements.snapshotSummary.textContent = `${activeIds.size} visible monarchies or monarchical states are active.${namesSummary}`;
+  const { activeIds } = activeAtYear(state.snapshotYear);
+  elements.snapshotSummary.textContent = `${activeIds.size} monarchies shown for this year.`;
 }
 
-function selectSnapshotYear(year, shouldScroll = false) {
-  const numericYear = Number(year);
-  state.snapshotYear = numericYear === 0 ? 1 : numericYear;
-  for (const button of elements.presetButtons.querySelectorAll('button')) {
-    button.setAttribute('aria-pressed', String(Number(button.dataset.year) === state.snapshotYear));
-  }
+function selectSnapshotYear(year, shouldScroll = false, writeUrl = true) {
+  state.snapshotYear = TimelineCore.normalizeYear(year, state.data.meta, state.snapshotYear);
+  for (const button of elements.presetButtons.querySelectorAll('button')) button.setAttribute('aria-pressed', String(Number(button.dataset.year) === state.snapshotYear));
   updateCrosshair();
-  showSnapshotDetail();
-  if (shouldScroll) {
-    const target = Math.max(0, xForYear(state.snapshotYear) - elements.plotScroller.clientWidth / 2);
-    elements.plotScroller.scrollTo({ left: target, behavior: 'smooth' });
-  }
+  showSnapshotDetail(writeUrl);
+  if (shouldScroll) elements.plotScroller.scrollTo({ left: Math.max(0, xForYear(state.snapshotYear) - elements.plotScroller.clientWidth / 2), behavior: scrollBehavior() });
 }
 
-function setDetail({ type, title, dates = '', copy = '', listTitle = '', list = [], sources = [], links = [] }) {
+function rulesForHouse(houseId) {
+  return state.data.rules
+    .filter((rule) => rule.house_id === houseId)
+    .sort((a, b) => a.start - b.start || effectiveEnd(a) - effectiveEnd(b));
+}
+
+function detailLink(type, id, label) { return { type, id, label }; }
+function recordUrl(type, id) {
+  const url = new URL(window.location.href);
+  url.searchParams.set('selection', `${type}:${id}`);
+  return url.href;
+}
+function syncUrl() {
+  const url = new URL(window.location.href);
+  for (const key of ['region', 'coverage', 'status', 'house', 'q', 'connections']) url.searchParams.delete(key);
+  for (const [key, value] of Object.entries({ year: state.snapshotYear, zoom: state.zoom,
+    selection: state.selected?.type !== 'snapshot' ? `${state.selected.type}:${state.selected.id}` : '' })) {
+    if (value === '') url.searchParams.delete(key);
+    else url.searchParams.set(key, String(value));
+  }
+  window.history.replaceState(null, '', url);
+}
+function openRecord(type, id, openDetails = true) {
+  const show = { region: showRegionDetail, polity: showPolityDetail, phase: showPhaseDetail, rule: showRuleDetail,
+    reign: showReignDetail, house: showHouseDetail, relationship: showRelationshipDetail, event: showEventDetail }[type];
+  const collection = { polity:'polities', phase:'phases', rule:'rules', reign:'reigns', house:'houses', relationship:'relationships', event:'events' }[type];
+  if (!show || !(type === 'region' ? state.polities.some(p => p.region === id) : dataIndex.ids[collection]?.has(id))) return false;
+  show(id);
+  setDetailOpen(openDetails);
+  return true;
+}
+function appendItems(container, items) {
+  for (const item of items) {
+    const li = document.createElement('li');
+    if (typeof item === 'string') li.textContent = item;
+    else {
+      const link = document.createElement('a');
+      link.href = recordUrl(item.type, item.id); link.textContent = item.label;
+      link.addEventListener('click', (event) => {
+        if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+        event.preventDefault(); openRecord(item.type, item.id); elements.detailTitle.focus({ preventScroll: true });
+      });
+      li.append(link);
+    }
+    container.append(li);
+  }
+}
+function setDetail({ type, title, dates = '', copy = '', listTitle = '', list = [], sources = [], links = [], groups = [], record = {}, writeUrl = true }) {
+  hideRelationshipPreview();
+  const polityId = record.polity_id || (state.selected.type === 'polity' ? record.id : null);
+  if (polityId && polityId !== state.mobilePolityId && state.polities.some(p => p.id === polityId)) {
+    state.mobilePolityId = polityId; elements.mobilePolitySelect.value = polityId; renderVerticalFocus();
+  }
   elements.detailType.textContent = type;
   elements.detailTitle.textContent = title;
   elements.detailToggleTitle.textContent = title;
   elements.detailDates.textContent = dates;
-  elements.detailCopy.textContent = copy;
-  elements.detailSecondaryTitle.textContent = listTitle || 'Related details';
+  elements.detailCopy.textContent = [copy, record.date_precision && record.date_precision !== 'year' ? `Date precision: ${record.date_precision}.` : '', record.review_note ? `Review note: ${record.review_note}` : ''].filter(Boolean).join('\n\n');
+  elements.detailSecondaryTitle.textContent = listTitle || 'Explore further';
   elements.detailList.replaceChildren();
-  for (const item of list) {
-    const li = document.createElement('li');
-    li.textContent = item;
-    elements.detailList.append(li);
+  appendItems(elements.detailList, list.length ? list : ['No entries in this selection.']);
+  elements.detailRelated.replaceChildren();
+  for (const group of groups.filter(g => g.items.length)) {
+    const section = document.createElement('section'); const heading = document.createElement('h4'); const ul = document.createElement('ul');
+    heading.textContent = group.title; appendItems(ul, group.items); section.append(heading, ul); elements.detailRelated.append(section);
   }
-  if (!list.length) {
-    const li = document.createElement('li');
-    li.textContent = 'No additional items in the current editorial selection.';
-    elements.detailList.append(li);
+  elements.detailWikipedia.replaceChildren();
+  elements.detailEvidence.replaceChildren();
+  const citations = [...new Map([...(record.sources || []).map(source_id => ({ source_id })), ...(record.citations || [])].map(c => [c.source_id, c])).values()];
+  const heading = document.createElement('h4'); heading.textContent = 'Sources'; elements.detailEvidence.append(heading);
+  if (citations.length) {
+    const ul = document.createElement('ul');
+    for (const citation of citations) {
+      const source = byId(state.data.sources, citation.source_id); if (!source) continue;
+      const li = document.createElement('li'); const a = document.createElement('a'); a.href = source.url; a.textContent = source.title;
+      a.target = '_blank'; a.rel = 'noreferrer'; li.append(a);
+      if (citation.locator) li.append(` · ${citation.locator}`);
+      ul.append(li);
+    }
+    elements.detailEvidence.append(ul);
+  } else {
+    const note = document.createElement('p'); note.className = 'attribution';
+    note.textContent = ['snapshot', 'region'].includes(state.selected.type) ? 'Select a ruler, monarchy or event to see its sources.' : 'No direct source attached. See background reading below.';
+    elements.detailEvidence.append(note);
   }
-
   elements.detailSources.replaceChildren();
-  const allLinks = [
-    ...sources.map((source) => ({ label: source.title, url: source.url })),
-    ...links
-  ];
-  const seen = new Set();
-  for (const link of allLinks) {
-    if (!link?.url || seen.has(link.url)) continue;
-    seen.add(link.url);
-    const anchor = document.createElement('a');
-    anchor.href = link.url;
-    anchor.target = '_blank';
-    anchor.rel = 'noreferrer';
-    anchor.textContent = link.label;
-    elements.detailSources.append(anchor);
-  }
+  for (const link of [...sources.map(source => ({ label: source.title, url: source.url })), ...links]) if (link?.url) appendDetailLink(link.label, link.url);
+  for (const button of elements.labelColumn.querySelectorAll('button[data-polity-id]')) button.setAttribute('aria-pressed', String(state.selected.type === 'polity' && state.selected.id === button.dataset.polityId));
+  elements.detailPanel.scrollTop = 0;
+  if (writeUrl) syncUrl();
 }
-
+function appendDetailLink(label, url) {
+  const anchor = document.createElement('a'); anchor.href = url;
+  if ([...elements.detailSources.children].some(item => item.href === anchor.href)) return;
+  anchor.target = '_blank'; anchor.rel = 'noreferrer'; anchor.textContent = label;
+  elements.detailSources.append(anchor);
+}
 function setDetailOpen(isOpen) {
   elements.detailPanel.classList.toggle('is-open', isOpen);
   elements.detailPanel.setAttribute('aria-hidden', String(!isOpen));
   elements.detailPanel.inert = !isOpen;
   elements.detailToggle.setAttribute('aria-expanded', String(isOpen));
   elements.detailToggle.hidden = isOpen;
-}
-
-function showSnapshotDetail() {
-  state.selected = { type: 'snapshot', id: String(state.snapshotYear) };
-  const preset = state.data.presets.find((item) => item.year === state.snapshotYear);
-  const { activeIds, activeReigns } = activeAtYear(state.snapshotYear);
-  const notable = activeReigns
-    .filter((reign) => reign.importance === 3)
-    .sort((a, b) => byId(state.data.polities, a.polity_id).region.localeCompare(byId(state.data.polities, b.polity_id).region))
-    .slice(0, 14)
-    .map((reign) => `${byId(state.data.persons, reign.person_id).name} — ${byId(state.data.polities, reign.polity_id).short_name}`);
-  const events = state.data.events
-    .filter((event) => event.year === state.snapshotYear)
-    .map((event) => event.label);
-  setDetail({
-    type: preset ? 'Story date' : 'Year snapshot',
-    title: preset?.title || `Europe in ${formatYear(state.snapshotYear)}`,
-    dates: `${activeIds.size} visible active polities`,
-    copy: preset?.description || 'The vertical line aligns every visible lane to the same year. Select a realm, dynasty band, monarch dot or crown connection for its sources and editorial note.',
-    listTitle: events.length ? 'Events and notable rulers' : 'Notable rulers',
-    list: [...events, ...notable]
+  if (isOpen && !elements.detailPanel.open) elements.detailPanel.show();
+  if (isOpen) requestAnimationFrame(() => {
+    if (elements.detailPanel.open) elements.detailTitle.focus({ preventScroll: true });
   });
+  if (!isOpen && elements.detailPanel.open) elements.detailPanel.close();
 }
-
+function reignLink(reign) {
+  return detailLink('reign', reign.id, `${byId(state.data.persons, reign.person_id).name} · ${byId(state.data.polities, reign.polity_id).short_name} · ${formatRange(reign.start, reign.end)}`);
+}
+function connectionLinks(polityId) {
+  return recordsFor(polityId, 'relationships').map(r => detailLink('relationship', r.id, `${r.label} · ${formatRange(r.start, r.end ?? r.start)}`));
+}
+function showSnapshotDetail(writeUrl = true) {
+  state.selected = { type: 'snapshot', id: String(state.snapshotYear) };
+  const preset = state.data.presets.find(item => item.year === state.snapshotYear);
+  const { activeIds, activeReigns } = activeAtYear(state.snapshotYear);
+  const events = state.data.events.filter(e => e.year === state.snapshotYear);
+  setDetail({ writeUrl, type: 'Year', title: preset?.title || `Europe in ${formatYear(state.snapshotYear)}`,
+    dates: `${activeIds.size} monarchies during ${formatYear(state.snapshotYear)}`,
+    copy: preset?.description || 'Selected reigns active during this year.',
+    listTitle: `Reigns (${activeReigns.length})`, list: activeReigns.map(reignLink),
+    groups: [{ title: 'Events during this year', items: events.map(e => detailLink('event',e.id,e.label)) },
+      { title: 'Monarchies', items: [...activeIds].map(id => detailLink('polity',id,byId(state.data.polities,id).name)) }] });
+}
 function showPolityDetail(polityId) {
   const polity = byId(state.data.polities, polityId);
-  const phases = state.data.phases.filter((phase) => phase.polity_id === polityId);
-  const reigns = state.data.reigns
-    .filter((reign) => reign.polity_id === polityId && reign.importance === 3)
-    .map((reign) => `${byId(state.data.persons, reign.person_id).name}, ${formatRange(reign.start, reign.end)}`);
+  const phases = recordsFor(polityId, 'phases');
+  state.mobilePolityId = polityId;
+  if (state.polities.some(p => p.id === polityId)) { elements.mobilePolitySelect.value = polityId; renderVerticalFocus(); }
   state.selected = { type: 'polity', id: polityId };
-  for (const button of elements.labelColumn.querySelectorAll('button[data-polity-id]')) {
-    button.setAttribute('aria-pressed', String(button.dataset.polityId === polityId));
-  }
-  setDetail({
-    type: `${polity.status === 'current' ? 'Current' : 'Former'} monarchy · Tier ${polity.tier}`,
-    title: polity.name,
-    dates: phases.map((phase) => formatRange(phase.start, phase.end)).join(' · '),
-    copy: polity.summary,
-    listTitle: 'Selected monarchs',
-    list: reigns,
-    sources: sourceObjects(polity.sources)
-  });
+  setDetail({ type: polity.status === 'current' ? 'Current monarchy' : 'Former monarchy',
+    title: polity.name, dates: phases.map(p => formatRange(p.start,p.end)).join(' · '), copy: polity.summary,
+    record: polity, listTitle: 'Selected reigns', list: recordsFor(polityId, 'reigns').map(reignLink),
+    groups: [{title:'Periods',items:phases.map(p=>detailLink('phase',p.id,`${p.name} · ${formatRange(p.start,p.end)}`))},
+      {title:'Crown connections',items:connectionLinks(polityId)},
+      {title:'Events',items:recordsFor(polityId,'events').map(e=>detailLink('event',e.id,`${e.label} · ${formatYear(e.year)}`))}] });
 }
-
+function showRegionDetail(region) {
+  state.selected = { type: 'region', id: region };
+  setDetail({ type: 'Region', title: region, copy: '', listTitle: 'Monarchies',
+    list: state.polities.filter(p => p.region === region).map(p => detailLink('polity', p.id, p.name)) });
+}
 function showPhaseDetail(phaseId) {
-  const phase = byId(state.data.phases, phaseId);
-  const polity = byId(state.data.polities, phase.polity_id);
-  const houses = state.data.rules
-    .filter((rule) => rule.polity_id === polity.id && rule.start <= phase.end && rule.end >= phase.start)
-    .map((rule) => `${byId(state.data.houses, rule.house_id).name}, ${formatRange(rule.start, rule.end)}`);
-  state.selected = { type: 'phase', id: phaseId };
-  setDetail({
-    type: 'Institutional phase',
-    title: phase.name,
-    dates: formatRange(phase.start, phase.end),
-    copy: phase.note || `${phase.name} is one dated phase within the broader ${polity.name} lane. Separate phases preserve interruptions, restorations and changes of constitutional identity.`,
-    listTitle: 'Ruling houses in this phase',
-    list: houses,
-    sources: sourceObjects(polity.sources)
-  });
+  const phase=byId(state.data.phases,phaseId), polity=byId(state.data.polities,phase.polity_id);
+  state.selected={type:'phase',id:phaseId};
+  setDetail({type:'Period',title:phase.name,dates:formatRange(phase.start,phase.end),copy:phase.note || polity.summary,record:phase,
+    listTitle:'Ruling houses and offices',list:recordsFor(polity.id,'rules').filter(r=>TimelineCore.overlaps(r,phase,state.data.meta)).map(r=>detailLink('rule',r.id,`${byId(state.data.houses,r.house_id).name} · ${formatRange(r.start,r.end)}`)),
+    groups:[{title:'Monarchy',items:[detailLink('polity',polity.id,polity.name)]}],sources:sourceObjects(polity.sources)});
 }
-
 function showRuleDetail(ruleId) {
-  const rule = byId(state.data.rules, ruleId);
-  const polity = byId(state.data.polities, rule.polity_id);
-  const house = byId(state.data.houses, rule.house_id);
-  const reigns = state.data.reigns
-    .filter((reign) => reign.polity_id === polity.id && reign.house_id === house.id)
-    .map((reign) => `${byId(state.data.persons, reign.person_id).name}, ${formatRange(reign.start, reign.end)}`);
-  state.selected = { type: 'rule', id: ruleId };
-  setDetail({
-    type: 'Ruling house',
-    title: house.name,
-    dates: `${polity.name} · ${formatRange(rule.start, rule.end)}`,
-    copy: `The band marks the period assigned to ${house.name} in the ${polity.name} lane. It does not imply uninterrupted biological succession: elective accessions, cadet branches and disputed reigns are simplified at overview scale.`,
-    listTitle: 'Selected rulers from this house',
-    list: reigns,
-    sources: sourceObjects(polity.sources)
-  });
+  const rule=byId(state.data.rules,ruleId),polity=byId(state.data.polities,rule.polity_id),house=byId(state.data.houses,rule.house_id);
+  state.selected={type:'rule',id:ruleId};
+  setDetail({type:house.kind==='office'?'Monarchical office':'Ruling house',title:house.name,dates:`${polity.name} · ${formatRange(rule.start,rule.end)}`,
+    copy:rule.note || house.summary || polity.summary,record:rule,
+    listTitle:'Reigns in this period',list:recordsFor(polity.id,'reigns').filter(r=>r.house_id===house.id && TimelineCore.overlaps(r,rule,state.data.meta)).map(reignLink),
+    groups:[{title:'Explore further',items:[detailLink('polity',polity.id,polity.name),detailLink('house',house.id,`${house.name} across crowns`)]}],sources:sourceObjects(polity.sources)});
+  addWikipediaSummary(house);
 }
-
 function showHouseDetail(houseId) {
-  if (houseId === 'all') {
-    showSnapshotDetail();
-    return;
-  }
-  const house = byId(state.data.houses, houseId);
-  const visibleIds = new Set(state.visiblePolities.map((polity) => polity.id));
-  const rules = state.data.rules
-    .filter((rule) => rule.house_id === houseId && visibleIds.has(rule.polity_id))
-    .sort((a, b) => a.start - b.start);
-  setDetail({
-    type: 'House highlight',
-    title: house.name,
-    dates: `${rules.length} visible crown segment${rules.length === 1 ? '' : 's'}`,
-    copy: 'Every matching band remains saturated while other ruling houses recede. Shared colour identifies the same house across different polity lanes; it does not claim that every branch acted as one political unit.',
-    listTitle: 'Crowns in chronological order',
-    list: rules.map((rule) => `${byId(state.data.polities, rule.polity_id).name}, ${formatRange(rule.start, rule.end)}`)
-  });
+  if(houseId==='all'){showSnapshotDetail();return;}
+  const house=byId(state.data.houses,houseId),rules=rulesForHouse(houseId);
+  state.selected={type:'house',id:houseId};
+  setDetail({type:house.kind==='office'?'Office':'House across crowns',title:house.name,dates:`${rules.length} periods shown`,copy:house.summary || 'Select a period to see its rulers and sources.',record:house,
+    listTitle:'Periods of rule',list:rules.map(r=>detailLink('rule',r.id,`${byId(state.data.polities,r.polity_id).name} · ${formatRange(r.start,r.end)}`))});
+  addWikipediaSummary(house);
 }
-
 function showReignDetail(reignId) {
-  const reign = byId(state.data.reigns, reignId);
-  const person = byId(state.data.persons, reign.person_id);
-  const polity = byId(state.data.polities, reign.polity_id);
-  const house = reign.house_id ? byId(state.data.houses, reign.house_id) : null;
-  const otherReigns = state.data.reigns
-    .filter((item) => item.person_id === person.id && item.id !== reign.id)
-    .map((item) => `${item.title} in ${byId(state.data.polities, item.polity_id).short_name}, ${formatRange(item.start, item.end)}`);
-  state.selected = { type: 'reign', id: reignId };
-  setDetail({
-    type: 'Selected reign',
-    title: person.name,
-    dates: `${reign.title} · ${formatRange(reign.start, reign.end)}`,
-    copy: house ? `${person.name} is shown within the ${house.name} segment of the ${polity.name} lane.` : `${person.name} is shown as a selected ruler of ${polity.name}.`,
-    listTitle: otherReigns.length ? 'Other crowns held' : 'Context',
-    list: otherReigns.length ? otherReigns : [polity.summary],
-    sources: sourceObjects(polity.sources),
-    links: [{ label: `${person.name} reference`, url: person.url }]
-  });
+  const reign=byId(state.data.reigns,reignId),person=byId(state.data.persons,reign.person_id),polity=byId(state.data.polities,reign.polity_id);
+  state.selected={type:'reign',id:reignId};
+  const siblings=state.data.reigns.filter(r=>r.person_id===person.id && r.id!==reign.id);
+  setDetail({type:'Selected reign',title:person.name,dates:`${reign.title} · ${formatRange(reign.start,reign.end)}`,
+    copy:reign.note || polity.summary,record:reign,
+    listTitle:'Explore the crown',list:[detailLink('polity',polity.id,polity.name)],
+    groups:[{title:'Other titles',items:siblings.map(reignLink)},{title:'Crown connections',items:connectionLinks(polity.id)}],
+    sources:sourceObjects(polity.sources),links:[{label:`${person.name} reference`,url:person.url}]});
+  addWikipediaSummary(person);
 }
-
-function showRelationshipDetail(relationshipId) {
-  const relationship = byId(state.data.relationships, relationshipId);
-  const polityNames = [...new Set([...relationship.from, ...relationship.to])]
-    .map((id) => byId(state.data.polities, id)?.name)
-    .filter(Boolean);
-  state.selected = { type: 'relationship', id: relationshipId };
-  setDetail({
-    type: relationship.type.replaceAll('_', ' '),
-    title: relationship.label,
-    dates: formatRange(relationship.start, relationship.end ?? relationship.start),
-    copy: relationship.description,
-    listTitle: 'Connected polity lanes',
-    list: polityNames,
-    sources: sourceObjects(relationship.sources)
-  });
+function showRelationshipDetail(id) {
+  const r=byId(state.data.relationships,id);state.selected={type:'relationship',id};
+  const ids=[...new Set([...r.from,...r.to])];
+  setDetail({type:TimelineCore.relationshipTypes[r.type][1],title:r.label,dates:formatRange(r.start,r.end??r.start),
+    copy:r.description,record:r,
+    listTitle:'Connected monarchies',list:ids.map(id=>detailLink('polity',id,byId(state.data.polities,id).name))});
+}
+function showEventDetail(id) {
+  const event=byId(state.data.events,id);state.selected={type:'event',id};
+  setDetail({type:'Event',title:event.label,dates:formatYear(event.year),copy:event.description,record:event,
+    listTitle:'Monarchies',list:event.polity_ids.map(id=>detailLink('polity',id,byId(state.data.polities,id).name))});
 }
 
 function bindControls() {
-  elements.regionFilter.addEventListener('change', (event) => {
-    state.region = event.target.value;
+  elements.relationshipTooltip.addEventListener('pointerenter', () => clearTimeout(relationshipPreviewTimer));
+  elements.relationshipTooltip.addEventListener('pointerleave', hideRelationshipPreview);
+  document.addEventListener('scroll', event => {
+    if (event.target !== elements.relationshipTooltip) hideRelationshipPreview();
+  }, { capture: true, passive: true });
+  window.addEventListener('resize', hideRelationshipPreview);
+  bindSearch();
+  elements.yearInput.addEventListener('change', event => selectSnapshotYear(event.target.value, true));
+  elements.zoom.addEventListener('change', event => {
+    const selected = state.selected;
+    state.zoom = Number(event.target.value);
     renderTimeline();
-    showSnapshotDetail();
+    if (selected.type === 'snapshot') selectSnapshotYear(state.snapshotYear, true);
+    else jumpToResult(selected, elements.detailPanel.open);
   });
-  elements.coverageFilter.addEventListener('change', (event) => {
-    state.coverage = event.target.value;
-    renderTimeline();
-    showSnapshotDetail();
-  });
-  elements.statusFilter.addEventListener('change', (event) => {
-    state.status = event.target.value;
-    renderTimeline();
-    showSnapshotDetail();
-  });
-  elements.houseFilter.addEventListener('change', (event) => {
-    state.house = event.target.value;
-    renderTimeline();
-    showHouseDetail(state.house);
-    setDetailOpen(true);
-  });
-  elements.relationshipToggle.addEventListener('change', (event) => {
-    state.showRelationships = event.target.checked;
-    elements.desktopTimeline.classList.toggle('relationships-hidden', !state.showRelationships);
-  });
-  elements.snapshotYear.addEventListener('input', (event) => selectSnapshotYear(event.target.value));
+  // Commit the URL after dragging; per-frame history writes can hit browser rate limits.
+  elements.snapshotYear.addEventListener('input', (event) => selectSnapshotYear(event.target.value, false, false));
+  elements.snapshotYear.addEventListener('change', syncUrl);
   elements.mobilePolitySelect.addEventListener('change', (event) => {
     state.mobilePolityId = event.target.value;
     renderVerticalFocus();
@@ -794,7 +897,6 @@ function bindControls() {
   elements.detailToggle.addEventListener('click', () => setDetailOpen(true));
   elements.detailClose.addEventListener('click', () => {
     setDetailOpen(false);
-    elements.detailToggle.focus();
   });
   document.addEventListener('pointerdown', (event) => {
     if (!elements.detailPanel.classList.contains('is-open')) return;
@@ -802,34 +904,31 @@ function bindControls() {
     setDetailOpen(false);
   });
   document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && elements.relationshipTooltip.matches(':popover-open')) {
+      hideRelationshipPreview();
+      return;
+    }
     if (event.key === 'Escape' && elements.detailPanel.classList.contains('is-open')) {
       setDetailOpen(false);
-      elements.detailToggle.focus();
-    }
+      }
   });
   elements.plotScroller.addEventListener('scroll', syncStickyAxis, { passive: true });
 }
 
-async function loadTimelineData() {
-  if (window.TIMELINE_DATA) return window.TIMELINE_DATA;
-
-  const response = await fetch(DATA_URL, { cache: 'no-store' });
-  if (!response.ok) throw new Error(`Timeline data returned HTTP ${response.status}`);
-  return response.json();
-}
-
-async function init() {
+function init() {
   try {
-    state.data = await loadTimelineData();
+    if (!state.data) throw new Error('Timeline data bundle is missing.');
+    state.plotWidth = Math.round((chartEnd() - chartStart()) * PIXELS_PER_YEAR);
+    elements.snapshotYear.min = String(chartStart());
+    elements.snapshotYear.max = String(chartEnd());
+    elements.yearInput.min = String(chartStart());
+    elements.yearInput.max = String(chartEnd());
     const searchParams = new URLSearchParams(window.location.search);
-    const requestedYear = Number(searchParams.get('year'));
-    if (searchParams.has('year') && Number.isInteger(requestedYear) && requestedYear >= CHART_START && requestedYear <= CHART_END) {
-      state.snapshotYear = requestedYear === 0 ? 1 : requestedYear;
-    }
-    elements.polityCount.textContent = String(state.data.polities.length);
-    elements.reignCount.textContent = String(state.data.reigns.length);
-    elements.currentCount.textContent = String(state.data.polities.filter((polity) => polity.status === 'current').length);
-    renderFilterOptions();
+    state.snapshotYear = TimelineCore.normalizeYear(searchParams.get('year'), state.data.meta);
+    if (['1','2','4'].includes(searchParams.get('zoom'))) state.zoom=Number(searchParams.get('zoom'));
+    const requestedSelection = searchParams.get('selection')?.split(':');
+    elements.search.value = searchParams.get('q') || '';
+    elements.zoom.value = String(state.zoom);
     renderPresetButtons();
     bindControls();
     renderTimeline();
@@ -837,6 +936,10 @@ async function init() {
     const initialTarget = Math.max(0, xForYear(state.snapshotYear) - elements.plotScroller.clientWidth / 2);
     elements.plotScroller.scrollLeft = initialTarget;
     syncStickyAxis();
+    if (requestedSelection?.length === 2) jumpToResult({ type: requestedSelection[0], id: requestedSelection[1] }, true);
+    else if (searchParams.get('q')) renderSearch();
+    else if (searchParams.get('region') && searchParams.get('region') !== 'all') jumpToResult({ type: 'region', id: searchParams.get('region') });
+    else if (searchParams.get('house') && searchParams.get('house') !== 'all') jumpToResult({ type: 'house', id: searchParams.get('house') });
   } catch (error) {
     elements.error.hidden = false;
     elements.error.textContent = `The timeline could not be loaded. ${error.message}`;

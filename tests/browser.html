@@ -1,0 +1,103 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Explorer browser checks</title>
+<style>body{font:16px system-ui;margin:24px;color:#20282d}iframe{width:100%;height:520px;border:1px solid #aaa}li{margin:6px 0}.fail{color:#a12a2a}.pass{color:#12614b}</style>
+<h1>Explorer browser checks</h1><p>Serve the repository with <code>npm run test:browser</code>. These checks use the real page, DOM and cached data without external requests.</p><ol id="results"></ol><p id="summary" role="status">Running…</p><iframe id="app" title="Explorer under test"></iframe>
+<script>
+const frame=document.getElementById('app'),results=document.getElementById('results');let passed=0,failed=0,skipped=0;
+function check(name,test){const li=document.createElement('li');try{if(!test())throw Error('Assertion failed');li.textContent=`PASS · ${name}`;li.className='pass';passed++;}catch(e){li.textContent=`FAIL · ${name}: ${e.message}`;li.className='fail';failed++;}results.append(li);}
+const load=url=>new Promise(resolve=>{frame.onload=resolve;frame.src=url;});
+(async()=>{
+ frame.style.width='1200px';
+ await load('../www/index.html?year=1519&coverage=all');
+ let doc=frame.contentDocument,win=frame.contentWindow;
+ await new Promise(resolve=>win.requestAnimationFrame(()=>win.requestAnimationFrame(resolve)));
+ const el=id=>doc.getElementById(id);
+ const change=(id,value,type='change')=>{el(id).value=value;el(id).dispatchEvent(new win.Event(type,{bubbles:true}));};
+ check('data loads and all lanes render',()=>el('timeline-error').hidden&&doc.querySelectorAll('.label-row').length===win.TIMELINE_DATA.polities.length);
+ check('terminal dissolutions are visible',()=>!!doc.querySelector('[data-relationship-id="rel-western-fall"]'));
+ const relationship=win.TIMELINE_DATA.relationships.find(r=>r.id==='rel-iberian-union');
+ const marker=doc.querySelector('.relationship-button[data-relationship-id="rel-iberian-union"]');
+ const line=doc.querySelector('.relationship-layer [data-relationship-id="rel-iberian-union"]');
+ const tip=el('relationship-tooltip'),beforeHover=win.location.href;
+ const pointer=(target,type)=>target.dispatchEvent(new win.PointerEvent(type,{pointerType:'mouse',clientX:win.innerWidth-2,clientY:win.innerHeight-2}));
+ pointer(marker,'pointerenter');
+ check('relationship hover explains its type, dates and meaning without opening details',()=>tip.matches(':popover-open')&&['Personal union','1580','1640',relationship.description].every(text=>tip.textContent.includes(text))&&win.location.href===beforeHover&&el('detail-panel').inert);
+ check('relationship preview fits near the viewport edge',()=>{const r=tip.getBoundingClientRect();return r.left>=0&&r.top>=0&&r.right<=win.innerWidth&&r.bottom<=win.innerHeight;});
+ pointer(marker,'pointerleave');pointer(tip,'pointerenter');
+ await new Promise(resolve=>setTimeout(resolve,180));
+ check('preview remains open while the pointer is over it',()=>tip.matches(':popover-open'));
+ pointer(tip,'pointerleave');
+ check('leaving the preview dismisses it',()=>!tip.matches(':popover-open'));
+ pointer(line,'pointerenter');
+ check('connection lines show the same explanation',()=>tip.matches(':popover-open')&&tip.textContent.includes(relationship.description)&&win.getComputedStyle(line.querySelector('.relationship-hit')).pointerEvents==='stroke');
+ doc.dispatchEvent(new win.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+ check('Escape dismisses the relationship preview',()=>!tip.matches(':popover-open'));
+ marker.focus();
+ pointer(marker,'pointerleave');
+ await new Promise(resolve=>setTimeout(resolve,180));
+ check('keyboard focus keeps the explanation visible and accessible',()=>doc.activeElement===marker&&tip.matches(':popover-open')&&marker.getAttribute('aria-label').includes(relationship.description)&&tip.textContent.includes(relationship.description));
+ marker.click();
+ check('clicking a relationship opens its details and dismisses the preview',()=>!tip.matches(':popover-open')&&!el('detail-panel').inert&&el('detail-title').textContent===relationship.label&&!!el('detail-evidence').querySelector('a'));
+ el('detail-close').click();
+ await new Promise(resolve=>win.requestAnimationFrame(()=>win.requestAnimationFrame(resolve)));
+ const firstRow=doc.querySelector('.label-row');
+ const searchKey=key=>el('search').dispatchEvent(new win.KeyboardEvent('keydown',{key,bubbles:true,cancelable:true}));
+ change('search','Charles V','input');
+ check('search distinguishes crowns without removing or rebuilding any rows',()=>el('search-results').textContent.includes('Spain')&&el('search-results').textContent.includes('Holy Roman Empire')&&doc.querySelectorAll('.label-row').length===win.TIMELINE_DATA.polities.length&&doc.querySelector('.label-row')===firstRow);
+ change('search','nothing matches this','input');
+ check('unmatched search leaves the timeline intact',()=>el('search-status').textContent.includes('No matches')&&doc.querySelectorAll('.label-row').length===win.TIMELINE_DATA.polities.length);
+ change('search','juan carlos','input');searchKey('ArrowDown');
+ check('arrow keys identify an accessible search result',()=>doc.getElementById(el('search').getAttribute('aria-activedescendant'))?.getAttribute('aria-selected')==='true');
+ searchKey('Enter');
+ const juan=win.TIMELINE_DATA.reigns.find(r=>r.person_id==='juan-carlos-i');
+ check('Enter jumps to the monarch and keeps details out of the way',()=>doc.querySelector('.reign-mark.search-match')?.dataset.reignId===juan.id&&el('year-input').value==='1975'&&el('detail-panel').inert&&el('search-panel').hidden);
+ await new Promise(resolve=>setTimeout(resolve,700));
+ check('the chosen monarch is visible after scrolling both timeline axes',()=>{const r=doc.querySelector('.reign-mark.search-match').getBoundingClientRect(),plot=el('plot-scroller').getBoundingClientRect();return win.scrollY>0&&r.top>=90&&r.bottom<=win.innerHeight&&r.left>=plot.left&&r.right<=plot.right;});
+ change('search','tudor england','input');el('search-results').firstElementChild.click();
+ check('dynasty search jumps to its period without dimming other houses',()=>doc.querySelector('.rule-segment.search-match')?.dataset.houseId==='tudor'&&doc.querySelectorAll('.label-row').length===win.TIMELINE_DATA.polities.length&&!doc.querySelector('.house-filtering'));
+ change('search','Iberia','input');el('search-results').firstElementChild.click();
+ check('region search jumps to the region heading',()=>doc.querySelector('.label-region.search-match')?.dataset.region==='Iberia');
+ change('search','Spain','input');el('search-results').firstElementChild.click();
+ check('country search jumps to its row',()=>doc.querySelector('.label-row .search-match')?.dataset.polityId==='spain');
+ change('search','france','input');searchKey('Escape');
+ check('Escape closes search suggestions without changing the selection',()=>el('search-panel').hidden&&doc.querySelector('.label-row .search-match')?.dataset.polityId==='spain');
+ change('search','','input');
+ check('clearing search keeps every country and the selected location',()=>el('search-panel').hidden&&doc.querySelector('.label-row')===firstRow&&doc.querySelector('.label-row .search-match')?.dataset.polityId==='spain');
+ change('year-input',0);check('year zero is normalized',()=>el('year-input').value==='1');
+ const beforeDrag=win.location.href;change('snapshot-year',1714,'input');
+ check('slider previews without flooding browser history',()=>el('year-input').value==='1714'&&win.location.href===beforeDrag);
+ change('snapshot-year',1714);check('slider commits its year to the URL on release',()=>new URL(win.location.href).searchParams.get('year')==='1714');
+ change('year-input',1724);el('detail-toggle').click();
+ check('annual snapshot includes the short reign of Louis I',()=>el('detail-list').textContent.includes('Louis I of Spain'));
+ await new Promise(resolve=>win.requestAnimationFrame(()=>win.requestAnimationFrame(resolve)));
+ if(win.document.hasFocus()) check('opening details moves keyboard focus into the panel',()=>{if(!el('detail-panel').contains(doc.activeElement))throw Error(`Focus stayed on ${doc.activeElement.id||doc.activeElement.tagName}`);return true;});
+ else {const li=document.createElement('li');li.textContent='SKIP · keyboard focus needs an active browser window; rerun this page in a foreground tab.';results.append(li);skipped++;}
+ const louis=[...el('detail-list').querySelectorAll('a')].find(a=>a.textContent.includes('Louis I of Spain'));louis.click();
+ check('related reign opens without losing the editorial note',()=>el('detail-title').textContent==='Louis I of Spain'&&el('detail-copy').textContent.includes('January'));
+ check('Wikipedia extract is local and attributed',()=>el('detail-wikipedia').textContent.includes('CC BY-SA 4.0')&&el('detail-wikipedia').querySelector('a[href*="oldid="]'));
+ check('direct citations are distinct from background reading',()=>el('detail-evidence').textContent.includes('Louis I of Spain')&&!!doc.querySelector('.background-sources'));
+ doc.dispatchEvent(new win.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));check('Escape closes and makes the drawer inert',()=>el('detail-panel').inert&&!el('detail-toggle').hidden);
+ change('zoom','4');check('zoom increases the timeline width',()=>parseFloat(el('plot-canvas').style.width)>9000);
+ change('search','Spain','input');el('search-results').firstElementChild.click();const shared=win.location.href;
+ await load(shared);doc=frame.contentDocument;win=frame.contentWindow;
+ check('URL restores the selected country, year and zoom with every row visible',()=>el('year-input').value==='1724'&&doc.querySelector('.label-row .search-match')?.dataset.polityId==='spain'&&el('zoom').value==='4'&&doc.querySelectorAll('.label-row').length===win.TIMELINE_DATA.polities.length);
+ await load('../www/index.html?region=Iberia&coverage=core-current&status=current&q=juan+carlos');doc=frame.contentDocument;win=frame.contentWindow;
+ check('old filter links preserve the search while showing every country',()=>el('search').value==='juan carlos'&&el('search-results').firstElementChild.textContent.includes('Juan Carlos I')&&doc.querySelectorAll('.label-row').length===win.TIMELINE_DATA.polities.length&&!new URL(win.location.href).searchParams.has('coverage'));
+ await load('../www/index.html?region=Iberia&status=current');doc=frame.contentDocument;win=frame.contentWindow;
+ check('old region links jump to the region instead of filtering',()=>doc.querySelector('.label-region.search-match')?.dataset.region==='Iberia'&&doc.querySelectorAll('.label-row').length===win.TIMELINE_DATA.polities.length);
+ await load('../www/index.html?selection=rule:rule-england-normandy');doc=frame.contentDocument;win=frame.contentWindow;
+ check('drawer stays within the viewport',()=>{const r=el('detail-panel').getBoundingClientRect();return r.top>=0&&r.bottom<=win.innerHeight;});
+ check('direct record URLs open an attributed detail',()=>el('detail-title').textContent==='Normandy'&&el('detail-wikipedia').textContent.includes('House of Normandy'));
+ for(const width of [320,760,1200]){
+  frame.style.width=width+'px';await new Promise(resolve=>win.requestAnimationFrame(resolve));
+  check(`layout stays within ${width}px`,()=>doc.documentElement.scrollWidth<=doc.documentElement.clientWidth);
+  if(width===320){
+   check('mobile focus remains usable',()=>win.getComputedStyle(el('vertical-chart')).display!=='none'&&el('mobile-polity-select').options.length===win.TIMELINE_DATA.polities.length);
+   change('search','juan carlos','input');el('search-results').firstElementChild.click();
+   check('mobile search selects the correct country and monarch',()=>el('mobile-polity-select').value==='spain'&&doc.querySelector('.vertical-reign.search-match')?.dataset.reignId===juan.id&&el('detail-panel').inert);
+  }
+ }
+ frame.style.width=new URLSearchParams(location.search).get('width')==='320'?'320px':'100%';
+ document.getElementById('summary').textContent=`${passed} passed; ${failed} failed; ${skipped} skipped.`;
+ document.title=`${failed?'FAIL':'PASS'} · Explorer browser checks`;
+})().catch(e=>{document.getElementById('summary').textContent=e.stack;document.title='FAIL · Explorer browser checks';});
+</script></html>

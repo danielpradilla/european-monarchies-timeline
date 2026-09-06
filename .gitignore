@@ -3,3 +3,4 @@ dist/
 .env
 .DS_Store
 data/wikidata_candidates.json
+data/wikidata_monarchies.json

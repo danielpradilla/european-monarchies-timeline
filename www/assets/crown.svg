@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 56">
+  <title>Braided Crowns</title>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="4">
+    <path stroke="#20282d" d="m12 33-4-20 14 10L32 7l10 16 14-10-4 20"/>
+    <path stroke="#2f5f7f" d="M12 35h7c10 0 16 12 26 12h7"/>
+    <path stroke="#fffdf9" stroke-width="8" d="m26 43 12-4"/>
+    <path stroke="#20282d" d="M12 47h7c10 0 16-12 26-12h7"/>
+  </g>
+</svg>
