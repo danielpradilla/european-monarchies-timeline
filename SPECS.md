@@ -48,8 +48,8 @@ The canonical dataset separates sources, houses, polities, phases, house-rule se
 
 - Static files live in `www/`
 - `npm run build` validates and synchronizes the web data
-- GitHub Pages deploys `www/` through GitHub Actions
-- The author's own host serves the committed `www/` directory and updates by fast-forward git pull
+- The production site is `https://www.danielpradilla.info/european-monarchies-timeline/www/`
+- Deploy the committed `www/` directory after tests pass
 - No server-side deployment or reset script
 
 ## Required editorial artifacts

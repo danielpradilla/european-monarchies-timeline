@@ -10,7 +10,7 @@
 - Added story dates, a year crosshair, filters, house highlighting and source-backed details
 - Added keyboard-accessible marks and reduced-motion support
 - Wrote the methodology and accompanying essay
-- Added data validation, tests, build scripts and GitHub Pages deployment
+- Added data validation, tests, build scripts and production deployment
 - Reconciled package and repository licensing under MIT
 - Performed an initial editorial review, followed by the September sourcing pass below
 
