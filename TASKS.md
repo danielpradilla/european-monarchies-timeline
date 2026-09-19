@@ -43,6 +43,6 @@ The public data-quality report tracks remaining work. A passing structural check
 ## Deployment policy
 
 - `master` is the production branch
-- GitHub Pages deploys through `.github/workflows/pages.yml`
-- The author's web host updates by `git pull --ff-only`
+- The production site is `https://www.danielpradilla.info/european-monarchies-timeline/www/`
+- Deploy the committed contents of `www/` after tests pass
 - No server-side deploy script, forced reset or unreviewed data ingestion

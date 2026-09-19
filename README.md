@@ -63,9 +63,7 @@ www/data/                Generated static data bundle
 
 ## Publishing
 
-The repository includes a GitHub Pages workflow that builds, validates and deploys `www/` after a push to `master`. Enable GitHub Pages with **GitHub Actions** as the source in the repository settings.
-
-For the author's own web host, point the domain document root at the checked-out `www/` directory. Production updates remain pull-only: run `git pull --ff-only` in the repository after a tested change lands on `master`. No server-side build or reset script is required because `www/data/timeline-data.js` is committed.
+The production site is <https://www.danielpradilla.info/european-monarchies-timeline/www/>. Deploy the committed contents of `www/` to that directory after tests pass. No server-side build is required because `www/data/timeline-data.js` is committed.
 
 ## Sources and corrections
 

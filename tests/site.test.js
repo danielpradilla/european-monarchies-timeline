@@ -52,8 +52,3 @@ test('published copy explains annual overlap and Wikipedia attribution',()=>{
   assert.match(read('www/assets/app.js'),/CC BY-SA 4\.0/);
   assert.doesNotMatch(read('www/assets/app.js'),/fetch\(/);
 });
-test('publication workflow validates and deploys the static web root',()=>{
-  const workflow=read('.github/workflows/pages.yml');
-  assert.match(workflow,/npm test && npm run build/);
-  assert.match(workflow,/path: www/);
-});
