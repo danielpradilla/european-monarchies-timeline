@@ -21,7 +21,7 @@ test('production pages resolve navigation and assets, including cache-versioned 
   for(const page of ['index','methodology','blog','quality']){
     const html=read(`www/${page}.html`);
     for(const match of html.matchAll(/(?:href|src)="([^"]+)"/g)){
-      const url=match[1];if(/^(?:https?:|#)/.test(url))continue;
+      const url=match[1];if(/^(?:https?:|#|\/)/.test(url))continue;
       assert.ok(fs.existsSync(path.join(root,'www',url.split(/[?#]/)[0])),`${page}: missing ${url}`);
     }
     assert.match(html,/aria-current="page"/);

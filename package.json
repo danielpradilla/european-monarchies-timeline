@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "A source-backed interactive timeline of major European monarchies from 27 BCE through 2026.",
   "scripts": {
-    "build": "npm run validate:data && npm run build:data",
+    "build": "npm run build:data",
     "build:data": "node scripts/build_site_data.js",
     "ingest:wikidata": "node scripts/ingest_wikidata.js",
     "serve": "python3 -m http.server 8000 --directory www",

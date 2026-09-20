@@ -15,7 +15,7 @@ The production site combines a horizontal desktop overview with a focused vertic
 - 29 contextual events
 - All 12 surviving sovereign European monarchies
 
-The canonical dataset is `data/timeline.json`. See `DATA_MODEL.md` for the schema, `HISTORICAL_AUDIT.md` for review history and the September 2026 corrections, and `www/methodology.html` for the public editorial rules.
+The canonical dataset is `data/timeline.json`. See `DATA_MODEL.md` for the schema, `IMPROVEMENTS.md` for the live editorial tracker and review history, and `www/methodology.html` for the public editorial rules.
 
 ## Run locally
 

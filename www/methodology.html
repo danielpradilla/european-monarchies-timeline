@@ -6,19 +6,35 @@
   <meta name="description" content="Scope, data model, sources and editorial method for The Braided Crowns of Europe.">
   <meta name="theme-color" content="#fffdf9">
   <title>Methodology · The Braided Crowns of Europe</title>
-  <link rel="icon" href="assets/crown.svg" type="image/svg+xml"><link rel="stylesheet" href="assets/styles.css?v=20260905e">
+  <link rel="icon" href="assets/crown.svg" type="image/svg+xml"><link rel="stylesheet" href="assets/styles.css?v=20260920a">
 </head>
 <body>
   <a class="skip-link" href="#methodology-title">Skip to methodology</a>
   <header class="site-header">
-    <a class="wordmark" href="index.html"><img src="assets/crown.svg" width="36" height="32" alt=""><span>The Braided Crowns of Europe</span></a>
-    <nav aria-label="Primary navigation">
+    <a class="dp-navbar-brand" href="/projects/">Daniel Pradilla</a>
+    <nav class="dp-navbar-links" aria-label="Site navigation">
       <a href="index.html">Explore</a>
       <a aria-current="page" href="methodology.html">Methodology</a>
       <a href="blog.html">Essay</a>
       <a href="quality.html">Data quality</a>
+      <a href="/blog/">Blog</a>
+      <a href="https://github.com/danielpradilla/european-monarchies-timeline">GitHub</a>
     </nav>
+    <details class="dp-navbar-menu">
+      <summary aria-label="Menu">&#9776;</summary>
+      <nav aria-label="Site navigation (mobile)">
+        <a href="index.html">Explore</a>
+        <a aria-current="page" href="methodology.html">Methodology</a>
+        <a href="blog.html">Essay</a>
+        <a href="quality.html">Data quality</a>
+        <a href="/blog/">Blog</a>
+        <a href="https://github.com/danielpradilla/european-monarchies-timeline">GitHub</a>
+      </nav>
+    </details>
   </header>
+  <div class="dp-project-header">
+    <h1><a class="wordmark" href="index.html"><img src="assets/crown.svg" width="36" height="32" alt=""><span>The Braided Crowns of Europe</span></a></h1>
+  </div>
 
   <main class="article-page">
     <header>
@@ -85,7 +101,7 @@
 
     <h2>Updates, tests and corrections</h2>
     <p>The canonical file is <code>data/timeline.json</code>. A deterministic build writes a compact data bundle and the data-quality report. The validator checks IDs, required text, references, date bounds, complete coverage within institutional phases, valid transition endpoints, state-union inputs, citation links and Wikipedia provenance. The website itself has no database or server dependency.</p>
-    <p>The repository’s <code>HISTORICAL_AUDIT.md</code> records the review history, September corrections and limits of the annual-scale model. Regression tests preserve consequential fixes such as the English Interregnum, Monaco's French-annexation gap, Majorian's corrected house assignment and the 1917–1922 sequence of imperial collapse.</p>
+    <p>The repository’s <code>IMPROVEMENTS.md</code> records the live editorial backlog, review history, September corrections and limits of the annual-scale model. Regression tests preserve consequential fixes such as the English Interregnum, Monaco's French-annexation gap, Majorian's corrected house assignment and the 1917–1922 sequence of imperial collapse.</p>
     <p>Corrections are welcome as focused GitHub issues. A useful report names the record, gives the proposed date or wording, and links to a source. Questions of periodization may result in a better note rather than a single "correct" year.</p>
     <p><a href="https://github.com/danielpradilla/european-monarchies-timeline/issues">Report a correction on GitHub</a></p>
 
