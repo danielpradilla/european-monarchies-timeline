@@ -6,10 +6,10 @@
   <meta name="description" content="Explore European monarchies and their rulers from 27 BCE to 2026.">
   <meta name="theme-color" content="#fffdf9">
   <title>The Braided Crowns of Europe</title>
-  <link rel="icon" href="assets/crown.svg" type="image/svg+xml"><link rel="stylesheet" href="assets/styles.css?v=20260920a">
+  <link rel="icon" href="assets/crown.svg" type="image/svg+xml"><link rel="stylesheet" href="assets/styles.css?v=20261001e">
 </head>
 <body>
-  <a class="skip-link" href="#timeline-heading">Skip to the timeline</a>
+  <a class="skip-link" href="#search">Skip to the timeline</a>
 
   <header class="site-header">
     <a class="dp-navbar-brand" href="/projects/">Daniel Pradilla</a>
@@ -41,37 +41,30 @@
     <section class="explorer" aria-label="Timeline" tabindex="-1">
       <div class="explore-toolbar">
         <search class="search-control">
-          <label for="search">Jump to a monarch, dynasty, country or region</label>
-          <input id="search" type="search" placeholder="Search names and places" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="search-results">
+          <label class="sr-only" for="search">Jump to a monarch, dynasty, country or region</label>
+          <input id="search" type="search" placeholder="Find a ruler, dynasty, country or region" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="search-results">
           <div id="search-panel" class="search-panel" hidden>
             <ul id="search-results" role="listbox" aria-label="Places on the timeline"></ul>
             <p id="search-status" role="status"></p>
           </div>
         </search>
-        <label class="zoom-control">Zoom
-          <select id="zoom"><option value="1">Overview</option><option value="2">2×</option><option value="4">4×</option></select>
-        </label>
-      </div>
-
-      <div class="story-jumps" aria-label="Jump to a year">
-        <span>Jump to</span>
-        <div id="preset-buttons"></div>
       </div>
 
       <div class="snapshot-control">
-        <label for="snapshot-year">Europe in <output id="snapshot-year-output" for="snapshot-year">1519</output></label>
-        <label class="year-entry">Enter a year <input id="year-input" type="number" step="1" value="1519" aria-describedby="year-help"></label>
+        <p class="snapshot-title"><label for="snapshot-year">Europe in</label> <output id="snapshot-year-output" for="snapshot-year">1519 CE</output></p>
         <input id="snapshot-year" type="range" value="1519" step="1">
         <p id="snapshot-summary" aria-live="polite"></p>
       </div>
 
-      <p id="year-help" class="status-line">Use negative years for BCE. Includes rulers who began or ended a reign during that year.</p>
+      <div class="story-jumps" role="group" aria-label="Jump to a year">
+        <span>Jump to</span>
+        <div id="preset-buttons"></div>
+      </div>
 
       <div id="timeline-error" class="error-message" role="alert" hidden></div>
 
-      <p class="status-line">Bars show periods of monarchy, colours show ruling houses, and dots show rulers.</p>
-
-      <div class="desktop-timeline" id="desktop-timeline" aria-label="Horizontal timeline of European monarchies">
+      <div class="desktop-timeline" id="desktop-timeline" role="group" aria-label="Horizontal timeline of European monarchies">
+        <p class="status-line">Connection symbols sit below a country involved. Hover or focus for the countries and dates; click for details. Click a region heading to fold its rows.</p>
         <div class="sticky-ruler" aria-hidden="true">
           <div class="sticky-ruler-label">Year</div>
           <div class="sticky-ruler-window"><div class="sticky-axis-layer" id="sticky-axis-layer"></div></div>
@@ -91,12 +84,19 @@
       </div>
 
       <div class="mobile-timeline">
-        <label for="mobile-polity-select">Monarchy</label>
-        <select id="mobile-polity-select"></select>
-        <div class="vertical-chart" id="vertical-chart" role="group" tabindex="-1" aria-label="Vertical focused timeline"></div>
+        <p class="status-line">Time runs down the page; swipe sideways for more monarchies. Tap any mark for details.</p>
+        <div class="column-header" id="column-header"><div class="column-header-track" id="column-header-track"></div></div>
+        <div class="vertical-scroller" id="vertical-scroller">
+          <div class="vertical-chart" id="vertical-chart" role="group" tabindex="-1" aria-label="Vertical timeline of European monarchies, one column per monarchy"></div>
+        </div>
       </div>
 
-      <div class="legend" aria-label="Timeline legend">
+      <div class="legend" role="group" aria-label="Timeline legend">
+        <div class="legend-group">
+          <strong class="legend-heading">Bars</strong>
+          <span><i class="legend-bar phase" aria-hidden="true"></i>Period of monarchy</span>
+          <span><i class="legend-bar house" aria-hidden="true"></i>Ruling house, named on the bar (colours repeat; they only separate neighbouring houses)</span>
+        </div>
         <div class="legend-group">
           <strong class="legend-heading">Lines</strong>
           <span><i class="legend-line personal" aria-hidden="true"></i>Shared rule (sometimes interrupted)</span>
@@ -105,23 +105,26 @@
         </div>
         <div class="legend-group">
           <strong class="legend-heading">Symbols</strong>
-          <span><i class="legend-marker" aria-hidden="true">◇</i>Union</span>
-          <span><i class="legend-marker" aria-hidden="true">+</i>State union</span>
-          <span><i class="legend-marker" aria-hidden="true">→</i>Continuity</span>
-          <span><i class="legend-marker" aria-hidden="true">↗</i>Partition</span>
-          <span><i class="legend-marker" aria-hidden="true">×</i>Conquest or dissolution</span>
-          <span><i class="legend-marker" aria-hidden="true">↺</i>Restoration</span>
-          <span><i class="legend-marker" aria-hidden="true">↔</i>Reorganization</span>
+          <span><i class="legend-marker" data-symbol="◇" aria-hidden="true"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M8 2.5 13.5 8 8 13.5 2.5 8Z"/></svg></i>Union</span>
+          <span><i class="legend-marker" data-symbol="+" aria-hidden="true"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 8H13M8 3V13"/></svg></i>State union</span>
+          <span><i class="legend-marker" data-symbol="→" aria-hidden="true"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 8H13M9 4l4 4-4 4"/></svg></i>Continuity</span>
+          <span><i class="legend-marker" data-symbol="↗" aria-hidden="true"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4 12l8-8M4 4h8v8"/></svg></i>Partition</span>
+          <span><i class="legend-marker" data-symbol="×" aria-hidden="true"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4 4l8 8M12 4l-8 8"/></svg></i>Conquest or dissolution</span>
+          <span><i class="legend-marker" data-symbol="↺" aria-hidden="true"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 6a5.4 5.4 0 1 1 0 4M3 2.5V6h3.5"/></svg></i>Restoration</span>
+          <span><i class="legend-marker" data-symbol="↔" aria-hidden="true"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M2.5 8h11M5.5 5l-3 3 3 3M10.5 5l3 3-3 3"/></svg></i>Reorganization</span>
         </div>
         <div class="legend-group">
           <strong class="legend-heading">Reigns</strong>
-          <span><i class="legend-dot" aria-hidden="true"></i>Ruler</span>
+          <span><i class="legend-reign" aria-hidden="true"></i>Ruler, with a line spanning the reign</span>
+          <span><i class="legend-reign major" aria-hidden="true"></i>Major ruler, labelled</span>
+          <span><i class="legend-now" aria-hidden="true"></i>Monarchy that still exists</span>
         </div>
+        <p class="status-line">Bars show periods of monarchy, colours show ruling houses, and dots show rulers.</p>
       </div>
 
       <button class="detail-toggle" id="detail-toggle" type="button" aria-controls="detail-panel" aria-expanded="false">
         <span>Details</span>
-        <strong id="detail-toggle-title">Europe in 1519</strong>
+        <strong class="sr-only" id="detail-toggle-title">Europe in 1519</strong>
       </button>
 
       <dialog class="detail-panel" id="detail-panel" aria-live="polite" aria-labelledby="detail-title" aria-hidden="true" inert>
@@ -130,14 +133,14 @@
           <button class="detail-close" id="detail-close" type="button" aria-label="Close details">Close</button>
         </div>
         <div class="detail-primary">
-          <h3 id="detail-title" tabindex="-1" autofocus>Europe in 1519</h3>
+          <h2 id="detail-title" tabindex="-1" autofocus>Europe in 1519</h2>
           <p class="detail-dates" id="detail-dates"></p>
           <p id="detail-copy">Choose a year to compare rulers.</p>
           <section id="detail-wikipedia" class="wikipedia-context"></section>
           <section id="detail-evidence" class="detail-evidence"></section>
         </div>
         <div class="detail-secondary">
-          <h4 id="detail-secondary-title">Rulers</h4>
+          <h3 id="detail-secondary-title">Rulers</h3>
           <ul id="detail-list"></ul>
           <div id="detail-related"></div>
           <details class="background-sources"><summary>Background reading</summary><div class="source-links" id="detail-sources"></div></details>
@@ -155,7 +158,7 @@
   <div id="relationship-tooltip" class="relationship-tooltip" role="tooltip" popover="manual"></div>
   <noscript><p class="error-message">Enable JavaScript to explore the timeline. The methodology, essay and data-quality report are available without it.</p></noscript>
   <script src="assets/timeline-core.js?v=20260905e" defer></script>
-  <script src="data/timeline-data.js?v=20260905" defer></script>
-  <script src="assets/app.js?v=20260905e" defer></script>
+  <script src="data/timeline-data.js?v=20260930h" defer></script>
+  <script src="assets/app.js?v=20261001e" defer></script>
 </body>
 </html>

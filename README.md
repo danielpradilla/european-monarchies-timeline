@@ -2,20 +2,20 @@
 
 A source-backed interactive timeline of major European monarchies from the Roman Principate to 2026.
 
-The production site combines a horizontal desktop overview with a focused vertical mobile timeline. Political phases, ruling houses, selected reigns and typed relationships are stored separately so that personal unions, partitions, restorations and multi-crown monarchs can be represented without pretending they form a simple family tree or quantitative Sankey flow.
+The production site combines a horizontal desktop overview with a transposed mobile timeline: time runs down the page and each monarchy is a column. Political phases, ruling houses, selected reigns and typed relationships are stored separately so that personal unions, partitions, restorations and multi-crown monarchs can be represented without pretending they form a simple family tree or quantitative Sankey flow.
 
 ## Current coverage
 
-- 53 polity lanes
-- 96 institutional phases
-- 92 ruling houses
-- 215 house-rule segments
-- 178 people and 209 curated reign records
-- 44 typed relationships
-- 29 contextual events
+- 78 polity lanes
+- 149 institutional phases
+- 111 ruling houses and offices
+- 285 house-rule segments
+- 215 people and 266 curated reign records
+- 73 typed relationships
+- 38 contextual events
 - All 12 surviving sovereign European monarchies
 
-The canonical dataset is `data/timeline.json`. See `DATA_MODEL.md` for the schema, `IMPROVEMENTS.md` for the live editorial tracker and review history, and `www/methodology.html` for the public editorial rules.
+The canonical dataset is `data/timeline.json`. See `DATA_MODEL.md` for the schema, `TASKS.md` for the action checklist, `IMPROVEMENTS.md` for editorial scope and review history, and `www/methodology.html` for the public editorial rules.
 
 ## Run locally
 
@@ -39,12 +39,12 @@ The suite exercises search, year snapshots, BCE/CE arithmetic, negative validati
 ```bash
 npm run --silent report:data  # Full per-record JSON review queue
 npm run validate:strict   # Fails on unresolved editorial items as well as errors
-npm run test:browser      # Then open http://127.0.0.1:8001/tests/browser.html
+npm run serve:tests      # Then open http://127.0.0.1:8001/tests/browser.html
 ```
 
-The browser harness checks the real explorer, linked details, search navigation without filtering, URL restoration, cached extracts and layouts at 320, 760 and 1200 pixels. It is a manual browser check; CI runs the Node suite. Keyboard focus requires a foreground browser window and is explicitly skipped in inactive/background windows.
+The browser harness checks the real explorer, linked details, search navigation without filtering, URL restoration, cached extracts and layouts at 320, 760 and 1200 pixels. It is a manual browser check; CI runs the Node suite. It also covers explicit-year links, mobile menu access, detail focus return and region collapse. Keyboard focus requires a foreground browser window and is explicitly skipped in inactive/background windows.
 
-**Passing tests establish structural consistency, not historical accuracy.** The [data-quality page](www/quality.html) lists missing direct citations and known modelling limitations. All 520 dated claims have direct citations; regional specialist review remains an ongoing editorial responsibility.
+**Passing tests establish structural consistency, not historical accuracy.** The [data-quality page](www/quality.html) lists missing direct citations and known modelling limitations. All 700 dated claims have direct citations; regional specialist review remains an ongoing editorial responsibility.
 
 ## Project structure
 
@@ -63,7 +63,9 @@ www/data/                Generated static data bundle
 
 ## Publishing
 
-The production site is <https://www.danielpradilla.info/european-monarchies-timeline/www/>. Deploy the committed contents of `www/` to that directory after tests pass. No server-side build is required because `www/data/timeline-data.js` is committed.
+The production site is <https://www.danielpradilla.info/projects/european-monarchies-timeline/>. Deploy the committed contents of `www/` directly to `~/danielpradilla.info/projects/european-monarchies-timeline/` after tests pass; do not create a remote `www/` subdirectory. No server-side build is required because `www/data/timeline-data.js` is committed.
+
+After verifying the new destination, upload `scripts/legacy_redirect.htaccess` as `~/danielpradilla.info/european-monarchies-timeline/.htaccess`. It permanently redirects the old project directory and its optional `www/` prefix to the canonical URL, preserving relative paths and query strings; browsers retain URL fragments. Leave the old files in place.
 
 ## Sources and corrections
 
@@ -71,9 +73,9 @@ The publication retains linked Wikipedia pages for broad navigation, while the J
 
 Corrections should name the affected record, propose exact wording or dates, and include a source. Open an issue at <https://github.com/danielpradilla/european-monarchies-timeline/issues>.
 
-`npm run ingest:wikidata` can generate an ignored `data/wikidata_candidates.json` review file for six pilot realms. It never edits the canonical timeline; the query results are candidates, not automatically accepted history.
+`npm run ingest:wikidata` can generate an ignored `data/wikidata_candidates.json` review file for six pilot realms. It restricts candidates to monarchical offices, reports truncation beyond 500 rows per realm, and preserves both prior output files if any request fails. It never edits the canonical timeline; candidates still need source verification.
 
-## Wikipedia refresh
+## Wikipedia cache additions
 
 ```bash
 npm run refresh:wikipedia
@@ -81,11 +83,11 @@ npm run build
 npm test
 ```
 
-Each person or house points to an explicit Wikipedia title (or an existing article URL). The refresh resolves redirects, rejects disambiguation/missing pages, records revision IDs and retrieval dates, and only replaces the cache after every request succeeds. Review the diff before committing. Normal builds and exploration never call Wikipedia. The cache is contextual reading, separate from the curated historical claims.
+Each person or house points to an explicit Wikipedia title (or an existing article URL). This command fetches only missing mapped articles and keeps existing reviewed extracts unchanged. It resolves redirects, rejects disambiguation/missing pages, records revision IDs and retrieval dates, and only replaces the cache after every request succeeds. To correct an existing extract, remove only its cache entry after reviewing the mapping, then rerun the command. Review the diff before committing. Normal builds and exploration never call Wikipedia. The cache is contextual reading, separate from the curated historical claims.
 
 ## Extending the timeline
 
-Add records and citations to `data/timeline.json`, reuse stable IDs, and run the build and checks. Ordinary lanes also represent short-lived predecessors, keeping one graph model. The explorer builds ID, polity and search indexes once; there is no backend, framework or runtime dependency. Sicily, Naples and the Two Sicilies have separate lanes. Add finer dates or more selected reigns only when the sources support them; record known limits in notes.
+Add records and citations to `data/timeline.json`, reuse stable IDs, and run the build and checks. Ordinary lanes also represent short-lived predecessors, keeping one graph model. The explorer builds ID, polity and search indexes once; there is no backend, framework or runtime dependency. Sicily, Naples and the Two Sicilies have separate lanes. The expanded coverage includes Iberian predecessor kingdoms and Islamic monarchies, Gothic and Lombard Italy, the medieval Italian crown, selected German and Italian territorial monarchies, Balkan principalities, Finland and Iceland. France and Bohemia reuse their existing lanes; Brandenburg and ducal Prussia stay separate so their shared ruler does not imply a state merger. Add finer dates or more selected reigns only when the sources support them; record known limits in notes.
 
 ## License
 

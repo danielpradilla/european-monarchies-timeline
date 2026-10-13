@@ -2,19 +2,20 @@ const PIXELS_PER_YEAR = 1.35;
 const ROW_HEIGHT = 62;
 const REGION_HEIGHT = 34;
 const AXIS_HEIGHT = 64;
-const MOBILE_HEIGHT = 760;
-const MOBILE_MARGIN = 34;
+const COLUMN_WIDTH = 36;
+const COLUMN_AXIS = 52;
+const COLUMN_PAD = 24;
 
 const REGION_ORDER = [
   'Mediterranean',
   'Southeast Europe',
+  'Italian states',
+  'Iberia',
   'Western Europe',
   'Britain and Ireland',
-  'Iberia',
-  'Nordics',
   'Central Europe',
   'Central and Eastern Europe',
-  'Italian states'
+  'Nordics'
 ];
 
 const HOUSE_PALETTE = [
@@ -26,14 +27,14 @@ const RELATION_SYMBOLS = Object.fromEntries(Object.entries(TimelineCore.relation
 
 const state = {
   data: window.TIMELINE_DATA,
-  zoom: 1,
   snapshotYear: 1519,
   selected: null,
+  collapsedRegions: new Set(),
   polities: [],
   layout: [],
+  relationshipMarkers: new Map(),
   plotWidth: 0,
-  plotHeight: 0,
-  mobilePolityId: 'france'
+  plotHeight: 0
 };
 
 const elements = {
@@ -41,8 +42,6 @@ const elements = {
   searchPanel: document.getElementById('search-panel'),
   searchResults: document.getElementById('search-results'),
   searchStatus: document.getElementById('search-status'),
-  yearInput: document.getElementById('year-input'),
-  zoom: document.getElementById('zoom'),
   detailWikipedia: document.getElementById('detail-wikipedia'),
   detailEvidence: document.getElementById('detail-evidence'),
   detailRelated: document.getElementById('detail-related'),
@@ -62,7 +61,9 @@ const elements = {
   relationshipControlsLayer: document.getElementById('relationship-controls-layer'),
   relationshipTooltip: document.getElementById('relationship-tooltip'),
   crosshair: document.getElementById('crosshair'),
-  mobilePolitySelect: document.getElementById('mobile-polity-select'),
+  columnHeader: document.getElementById('column-header'),
+  columnHeaderTrack: document.getElementById('column-header-track'),
+  verticalScroller: document.getElementById('vertical-scroller'),
   verticalChart: document.getElementById('vertical-chart'),
   detailPanel: document.getElementById('detail-panel'),
   detailToggle: document.getElementById('detail-toggle'),
@@ -81,6 +82,7 @@ const dataIndex = state.data ? TimelineCore.indexData(state.data) : { ids: {}, b
 const collectionMaps = new Map(Object.entries(dataIndex.ids).map(([key, map]) => [state.data[key], map]));
 const byId = (items, id) => collectionMaps.get(items)?.get(id);
 const recordsFor = (polityId, key) => dataIndex.byPolity.get(polityId)?.[key] || [];
+const mobileView = () => window.matchMedia('(max-width: 760px)').matches;
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const scrollBehavior = () => reducedMotion() ? 'auto' : 'smooth';
 
@@ -121,7 +123,7 @@ function addWikipediaSummary(record) {
   const title = record.wikipedia_title || TimelineCore.wikipediaTitle(record.url);
   const page = window.WIKIPEDIA_EXTRACTS?.[title];
   elements.detailWikipedia.replaceChildren();
-  const heading = document.createElement('h4');
+  const heading = document.createElement('h3');
   heading.textContent = page ? `Wikipedia · ${page.title}` : 'Further reading';
   const copy = document.createElement('p');
   copy.textContent = page?.text || 'No cached Wikipedia extract is available for this record. The linked references below remain available.';
@@ -204,25 +206,30 @@ function bindSearch() {
   });
 }
 
-function jumpToResult(result, openDetails = false) {
+function toggleRegion(region) {
+  if (!state.collapsedRegions.delete(region)) state.collapsedRegions.add(region);
+  renderTimeline();
+  elements.labelColumn.querySelector(`[data-region="${CSS.escape(region)}"]`)?.focus();
+}
+
+function jumpToResult(result, openDetails = false, requestedYear = null) {
   if (!openRecord(result.type, result.id, false)) return false;
   const collection = { reign: 'reigns', rule: 'rules', phase: 'phases', event: 'events', relationship: 'relationships' }[result.type];
   const record = result.type === 'house' ? rulesForHouse(result.id)[0] : dataIndex.ids[collection]?.get(result.id);
   const polityId = result.type === 'polity' ? result.id : result.type === 'region'
     ? state.polities.find(p => p.region === result.id)?.id : record?.polity_id || record?.from?.[0] || record?.to?.[0] || record?.polity_ids?.[0];
   if (!polityId) return false;
-  state.mobilePolityId = polityId;
-  elements.mobilePolitySelect.value = polityId;
-  renderVerticalFocus();
+  if (state.collapsedRegions.delete(byId(state.data.polities, polityId)?.region)) renderTimeline();
   const phases = recordsFor(polityId, 'phases');
-  const year = record?.start ?? record?.year ?? (result.type === 'region' || phases.some(p => TimelineCore.activeDuring(p, state.snapshotYear, state.data.meta)) ? state.snapshotYear : phases[0].start);
+  const year = requestedYear ?? record?.start ?? record?.year ?? (result.type === 'region' || phases.some(p => TimelineCore.activeDuring(p, state.snapshotYear, state.data.meta)) ? state.snapshotYear : phases[0].start);
   state.snapshotYear = year;
   updateCrosshair();
   for (const button of elements.presetButtons.children) button.setAttribute('aria-pressed', String(Number(button.dataset.year) === year));
-  const mobile = window.matchMedia('(max-width: 760px)').matches;
-  const chart = mobile ? elements.verticalChart : elements.laneLayer;
-  const attribute = { reign: 'reignId', rule: 'ruleId', house: 'ruleId', phase: 'phaseId' }[result.type];
+  const mobile = mobileView();
+  const chart = mobile ? elements.verticalChart : elements.plotCanvas;
+  const attribute = { reign: 'reignId', rule: 'ruleId', house: 'ruleId', phase: 'phaseId', relationship: 'relationshipId' }[result.type];
   let target = attribute ? [...chart.querySelectorAll('button')].find(button => button.dataset[attribute] === record?.id) : null;
+  if (!target && mobile) target = elements.columnHeaderTrack.querySelector(`[data-polity-id="${CSS.escape(polityId)}"]`);
   if (!target && !mobile) target = result.type === 'region'
     ? [...elements.labelColumn.querySelectorAll('[data-region]')].find(item => item.dataset.region === result.id)
     : [...elements.labelColumn.querySelectorAll('button')].find(button => button.dataset.polityId === polityId);
@@ -230,12 +237,13 @@ function jumpToResult(result, openDetails = false) {
   for (const previous of document.querySelectorAll('.search-match')) previous.classList.remove('search-match');
   target.classList.add('search-match');
   target.focus({ preventScroll: true });
-  if (!mobile) elements.plotScroller.scrollTo({
-    left: Math.max(0, xForYear(record?.start !== undefined ? (record.start + (record.end === undefined ? record.start : effectiveEnd(record))) / 2 : year) - elements.plotScroller.clientWidth / 2),
-    behavior: scrollBehavior()
-  });
-  const rect = target.getBoundingClientRect();
-  window.scrollTo({ top: Math.max(0, window.scrollY + rect.top + rect.height / 2 - (window.innerHeight + 90) / 2), behavior: scrollBehavior() });
+  const focusYear = record?.start !== undefined ? (record.start + (record.end === undefined ? record.start : effectiveEnd(record))) / 2 : year;
+  if (mobile) scrollColumnsTo(focusYear, polityId);
+  else {
+    elements.plotScroller.scrollTo({ left: Math.max(0, xForYear(focusYear) - elements.plotScroller.clientWidth / 2), behavior: scrollBehavior() });
+    const rect = target.getBoundingClientRect();
+    window.scrollTo({ top: Math.max(0, window.scrollY + rect.top + rect.height / 2 - (window.innerHeight + 64) / 2), behavior: scrollBehavior() });
+  }
   elements.search.value = result.label || (result.type === 'region' ? result.id : elements.detailTitle.textContent);
   closeSearch();
   syncUrl();
@@ -253,7 +261,7 @@ function renderPresetButtons() {
     button.setAttribute('aria-pressed', String(preset.year === state.snapshotYear));
     button.textContent = preset.label;
     button.addEventListener('click', () => {
-      selectSnapshotYear(preset.year, true);
+      selectSnapshotYear(preset.year);
       setDetailOpen(true);
     });
     elements.presetButtons.append(button);
@@ -261,6 +269,21 @@ function renderPresetButtons() {
 }
 
 function buildLayout(polities) {
+  // Anchor each symbol to a visible endpoint; stack nearby dates below the ruler labels.
+  const visible = new Set(polities.filter(p => !state.collapsedRegions.has(p.region)).map(p => p.id));
+  const markerSlots = new Map();
+  state.relationshipMarkers.clear();
+  for (const relationship of [...state.data.relationships].sort((a, b) => a.start - b.start)) {
+    const polityId = [...relationship.from, ...relationship.to].find(id => visible.has(id));
+    if (!polityId) continue;
+    const x = xForYear(relationship.start);
+    const slots = markerSlots.get(polityId) || [];
+    let slot = slots.findIndex(previousX => x - previousX >= 20);
+    if (slot < 0) slot = slots.length;
+    slots[slot] = x;
+    markerSlots.set(polityId, slots);
+    state.relationshipMarkers.set(relationship.id, { polityId, offset: ROW_HEIGHT + 10 + slot * 20 });
+  }
   const layout = [];
   let top = 0;
   let activeRegion = null;
@@ -270,23 +293,29 @@ function buildLayout(polities) {
       layout.push({ type: 'region', region: activeRegion, top });
       top += REGION_HEIGHT;
     }
-    layout.push({ type: 'polity', polity, top });
-    top += ROW_HEIGHT;
+    if (state.collapsedRegions.has(polity.region)) continue;
+    const height = ROW_HEIGHT + (markerSlots.get(polity.id)?.length || 0) * 20;
+    layout.push({ type: 'polity', polity, top, height });
+    top += height;
   }
   state.plotHeight = top;
   return layout;
 }
 
+function axisTicks() {
+  const ticks = [chartStart()];
+  const tickStep = 100;
+  for (let year = Math.ceil(chartStart() / tickStep) * tickStep; year < chartEnd(); year += tickStep) {
+    if (year !== 0 && year !== chartStart() && chartEnd() - year > tickStep / 2) ticks.push(year);
+  }
+  if (chartEnd() !== chartStart()) ticks.push(chartEnd());
+  return ticks;
+}
+
 function renderAxisInto(container) {
   container.replaceChildren();
   container.style.width = `${state.plotWidth}px`;
-  const ticks = [chartStart()];
-  const tickStep = state.zoom >= 4 ? 50 : state.zoom >= 2 ? 100 : 200;
-  for (let year = Math.ceil(chartStart() / tickStep) * tickStep; year < chartEnd(); year += tickStep) {
-    if (year !== 0 && year !== chartStart()) ticks.push(year);
-  }
-  if (chartEnd() !== chartStart()) ticks.push(chartEnd());
-  for (const year of ticks) {
+  for (const year of axisTicks()) {
     const tick = document.createElement('div');
     tick.className = 'axis-tick';
     tick.style.left = `${xForYear(year)}px`;
@@ -312,17 +341,21 @@ function renderLabelColumn() {
   elements.labelColumn.style.height = `${AXIS_HEIGHT + state.plotHeight}px`;
   for (const item of state.layout) {
     if (item.type === 'region') {
-      const region = document.createElement('div');
+      const collapsed = state.collapsedRegions.has(item.region);
+      const region = document.createElement('button');
+      region.type = 'button';
       region.className = 'label-region';
       region.textContent = item.region;
       region.dataset.region = item.region;
-      region.tabIndex = -1;
+      region.setAttribute('aria-expanded', String(!collapsed));
+      region.addEventListener('click', () => toggleRegion(item.region));
       elements.labelColumn.append(region);
       continue;
     }
 
     const row = document.createElement('div');
     row.className = 'label-row';
+    row.style.height = `${item.height}px`;
     const button = document.createElement('button');
     button.type = 'button';
     button.dataset.polityId = item.polity.id;
@@ -370,6 +403,7 @@ function renderLaneLayer() {
     const polity = item.polity;
     const row = document.createElement('div');
     row.className = 'plot-row';
+    row.style.height = `${item.height}px`;
     row.dataset.polityId = polity.id;
     row.style.top = `${item.top}px`;
 
@@ -447,10 +481,6 @@ function renderLaneLayer() {
   }
 }
 
-function average(values) {
-  return values.reduce((sum, value) => sum + value, 0) / values.length;
-}
-
 let relationshipPreviewTimer;
 function hideRelationshipPreview() {
   clearTimeout(relationshipPreviewTimer);
@@ -461,7 +491,8 @@ function bindRelationshipPreview(target, relationship) {
     if (event.pointerType === 'touch') return;
     clearTimeout(relationshipPreviewTimer);
     const tip = elements.relationshipTooltip;
-    tip.textContent = `${TimelineCore.relationshipTypes[relationship.type][1]} · ${formatRange(relationship.start, relationship.end ?? relationship.start)}\n${relationship.label}\n\n${relationship.description}`;
+    const names = [...new Set([...relationship.from, ...relationship.to])].map(id => byId(state.data.polities, id).name).join(' · ');
+    tip.textContent = `${TimelineCore.relationshipTypes[relationship.type][1]} · ${formatRange(relationship.start, relationship.end ?? relationship.start)}\n${relationship.label}\n${names}\n\n${relationship.description}`;
     tip.showPopover();
     const rect = target.getBoundingClientRect();
     const x = event.clientX ?? rect.left + rect.width / 2;
@@ -483,6 +514,33 @@ function bindRelationshipPreview(target, relationship) {
   });
 }
 
+function updateRelationshipSelection() {
+  const id = state.selected?.type === 'relationship' ? state.selected.id : null;
+  for (const group of elements.relationshipLayer.children) {
+    group.classList.toggle('is-selected', group.dataset.relationshipId === id);
+  }
+  const selected = elements.relationshipLayer.querySelector('.is-selected');
+  elements.relationshipLayer.classList.toggle('has-selection', Boolean(selected));
+  // Paint the selected branches last so crossing lines cannot cover them.
+  if (selected) elements.relationshipLayer.append(selected);
+  for (const button of elements.relationshipControlsLayer.children) {
+    button.setAttribute('aria-pressed', String(button.dataset.relationshipId === id));
+  }
+}
+
+function relationshipButton(relationship, endpointIds, polityId) {
+  const button = elementButton(
+    'relationship-button',
+    `${relationship.label}, ${formatRange(relationship.start, relationship.end ?? relationship.start)}. ${endpointIds.map(id => byId(state.data.polities, id).name).join(', ')}. ${TimelineCore.relationshipTypes[relationship.type][1]}: ${relationship.description}`,
+    () => showRelationshipDetail(relationship.id)
+  );
+  button.append(document.querySelector(`.legend-marker[data-symbol="${RELATION_SYMBOLS[relationship.type]}"] svg`).cloneNode(true));
+  bindRelationshipPreview(button, relationship);
+  button.dataset.relationshipId = relationship.id;
+  button.dataset.polityId = polityId;
+  return button;
+}
+
 function renderRelationships() {
   hideRelationshipPreview();
   elements.relationshipLayer.replaceChildren();
@@ -498,12 +556,18 @@ function renderRelationships() {
       .filter((item) => item.type === 'polity')
       .map((item) => [item.polity.id, item.top + ROW_HEIGHT / 2])
   );
+  for (const item of state.layout) {
+    if (item.type !== 'region' || !state.collapsedRegions.has(item.region)) continue;
+    for (const polity of state.polities) if (polity.region === item.region) yByPolity.set(polity.id, item.top + REGION_HEIGHT / 2);
+  }
   const namespace = 'http://www.w3.org/2000/svg';
 
   for (const relationship of state.data.relationships) {
+    const marker = state.relationshipMarkers.get(relationship.id);
+    if (!marker) continue;
     const endpointIds = [...new Set([...relationship.from, ...relationship.to])];
-    const ys = endpointIds.map((id) => yByPolity.get(id));
-    const markerY = average(ys);
+    const ys = [...new Set(endpointIds.map((id) => yByPolity.get(id)))];
+    const markerY = state.layout.find(item => item.polity?.id === marker.polityId).top + marker.offset;
     const x = xForYear(relationship.start);
     const group = document.createElementNS(namespace, 'g');
     group.dataset.relationshipId = relationship.id;
@@ -512,144 +576,213 @@ function renderRelationships() {
     for (const y of ys) {
       const path = document.createElementNS(namespace, 'path');
       path.setAttribute('class', relationship.type);
-      path.setAttribute('d', ys.length === 1
-        ? `M ${x - 14} ${y} Q ${x} ${y - 28} ${x + 14} ${y}`
-        : `M ${x} ${y} C ${x + 24} ${y}, ${x + 24} ${markerY}, ${x} ${markerY}`);
+      path.setAttribute('d', `M ${x} ${y} C ${x + 24} ${y}, ${x + 24} ${markerY}, ${x} ${markerY}`);
       const hit = path.cloneNode();
       hit.setAttribute('class', 'relationship-hit');
       group.append(path, hit);
     }
     elements.relationshipLayer.append(group);
 
-    const button = elementButton(
-      'relationship-button',
-      `${relationship.label}, ${formatRange(relationship.start, relationship.end ?? relationship.start)}. ${TimelineCore.relationshipTypes[relationship.type][1]}: ${relationship.description}`,
-      () => showRelationshipDetail(relationship.id)
-    );
-    button.textContent = RELATION_SYMBOLS[relationship.type] || '•';
+    const button = relationshipButton(relationship, endpointIds, marker.polityId);
     button.style.left = `${x}px`;
-    button.style.top = `${ys.length === 1 ? markerY - 14 : markerY}px`;
-    bindRelationshipPreview(button, relationship);
-    button.dataset.relationshipId = relationship.id;
+    button.style.top = `${markerY}px`;
     elements.relationshipControlsLayer.append(button);
   }
+  updateRelationshipSelection();
 }
 
 function renderTimeline() {
   state.polities = orderedPolities();
+  state.plotWidth = Math.round((TimelineCore.yearPosition(chartEnd()) - TimelineCore.yearPosition(chartStart())) * PIXELS_PER_YEAR);
   state.layout = buildLayout(state.polities);
-  state.plotWidth = Math.round((TimelineCore.yearPosition(chartEnd()) - TimelineCore.yearPosition(chartStart())) * PIXELS_PER_YEAR * state.zoom);
   elements.plotCanvas.style.width = `${state.plotWidth}px`;
   elements.plotCanvas.style.height = `${AXIS_HEIGHT + state.plotHeight}px`;
   renderAxis();
   renderLabelColumn();
   renderLaneLayer();
   renderRelationships();
-  renderMobileSelector();
+  renderColumns();
   updateCrosshair();
 }
 
-function renderMobileSelector() {
-  const previous = state.mobilePolityId;
-  elements.mobilePolitySelect.replaceChildren();
-  elements.mobilePolitySelect.append(
-    ...state.polities.map((polity) => new Option(polity.name, polity.id))
-  );
-  state.mobilePolityId = state.polities.some((polity) => polity.id === previous)
-    ? previous
-    : state.polities[0]?.id || '';
-  elements.mobilePolitySelect.value = state.mobilePolityId;
-  renderVerticalFocus();
-}
-
-function mobileY(year, start, end) {
+function columnY(year) {
   const position = TimelineCore.yearPosition;
-  return MOBILE_MARGIN + ((position(year) - position(start)) / Math.max(1, position(end) - position(start))) * (MOBILE_HEIGHT - MOBILE_MARGIN * 2);
+  return COLUMN_PAD + (position(year) - position(chartStart())) * PIXELS_PER_YEAR;
 }
 
-function renderVerticalFocus() {
-  const polity = byId(state.data.polities, state.mobilePolityId);
-  elements.verticalChart.replaceChildren();
-  if (!polity) return;
+function columnX(polityId) {
+  return COLUMN_AXIS + state.polities.findIndex(polity => polity.id === polityId) * COLUMN_WIDTH;
+}
 
-  const phases = recordsFor(polity.id, 'phases');
-  const start = Math.min(...phases.map((phase) => phase.start));
-  const end = Math.max(...phases.map(effectiveEnd));
-  elements.verticalChart.setAttribute('aria-label', `${polity.name}, ${formatRange(start, end)}. Vertical timeline with phases, houses and selected monarchs.`);
+function syncColumnHeader() {
+  elements.columnHeaderTrack.style.transform = `translateX(${-elements.verticalScroller.scrollLeft}px)`;
+}
+
+function scrollColumnsTo(year, polityId, behavior = scrollBehavior()) {
+  if (polityId) elements.verticalScroller.scrollTo({ left: Math.max(0, columnX(polityId) + COLUMN_WIDTH / 2 - elements.verticalScroller.clientWidth / 2), behavior });
+  const headerBottom = elements.columnHeader.getBoundingClientRect().height + 64;
+  const top = elements.verticalChart.getBoundingClientRect().top + window.scrollY + columnY(year);
+  window.scrollTo({ top: Math.max(0, top - headerBottom - 40), behavior });
+}
+
+// Mobile view: the desktop chart transposed, with time running down and one column per polity.
+function renderColumns() {
+  const chart = elements.verticalChart;
+  const header = elements.columnHeaderTrack;
+  chart.replaceChildren();
+  header.replaceChildren();
+  const width = COLUMN_AXIS + state.polities.length * COLUMN_WIDTH;
+  const height = columnY(chartEnd()) + COLUMN_PAD;
+  chart.style.width = header.style.width = `${width}px`;
+  chart.style.height = `${height}px`;
 
   const axis = document.createElement('div');
-  axis.className = 'vertical-axis';
-  const span = TimelineCore.yearPosition(end) - TimelineCore.yearPosition(start);
-  const step = span > 1200 ? 250 : span > 600 ? 100 : span > 250 ? 50 : 25;
-  const ticks = [start];
-  for (let year = Math.ceil(start / step) * step; year < end; year += step) {
-    if (year > start && year !== 0) ticks.push(year);
-  }
-  ticks.push(end);
-  for (const year of ticks) {
-    const tick = document.createElement('div');
-    tick.className = 'vertical-tick';
-    tick.style.top = `${mobileY(year, start, end) - MOBILE_MARGIN}px`;
+  axis.className = 'column-axis';
+  for (const year of axisTicks()) {
     const label = document.createElement('span');
+    label.className = 'column-tick';
+    label.style.top = `${columnY(year)}px`;
     label.textContent = formatYear(year);
-    tick.append(label);
-    axis.append(tick);
+    axis.append(label);
+    const line = document.createElement('div');
+    line.className = 'column-gridline';
+    line.style.top = `${columnY(year)}px`;
+    chart.append(line);
   }
-  elements.verticalChart.append(axis);
+  const crosshairLabel = document.createElement('span');
+  crosshairLabel.className = 'column-crosshair-label';
+  axis.append(crosshairLabel);
+  chart.prepend(axis);
+  const crosshair = document.createElement('div');
+  crosshair.className = 'column-crosshair';
+  crosshair.setAttribute('aria-hidden', 'true');
+  chart.append(crosshair);
 
-  for (const phase of phases) {
-    const top = mobileY(phase.start, start, end);
-    const bottom = mobileY(effectiveEnd(phase), start, end);
-    const button = elementButton(
-      'vertical-phase',
-      `${phase.name}, ${formatRange(phase.start, phase.end)}`,
-      () => showPhaseDetail(phase.id)
-    );
-    button.style.top = `${top}px`;
-    button.style.height = `${Math.max(5, bottom - top)}px`;
-    button.dataset.phaseId = phase.id;
-    if (bottom - top > 30) button.textContent = phase.name;
-    elements.verticalChart.append(button);
-  }
+  let region;
+  for (const polity of state.polities) {
+    const x = columnX(polity.id);
+    if (polity.region !== region?.dataset.region) {
+      region = document.createElement('span');
+      region.className = 'column-region';
+      region.dataset.region = polity.region;
+      region.textContent = region.title = polity.region;
+      region.style.left = `${x}px`;
+      header.append(region);
+    }
+    region.style.width = `${x + COLUMN_WIDTH - parseFloat(region.style.left)}px`;
 
-  for (const rule of recordsFor(polity.id, 'rules')) {
-    const top = mobileY(rule.start, start, end);
-    const bottom = mobileY(effectiveEnd(rule), start, end);
-    const house = byId(state.data.houses, rule.house_id);
-    const button = elementButton(
-      'vertical-rule',
-      `${house.name}, ${formatRange(rule.start, rule.end)}`,
-      () => showRuleDetail(rule.id)
-    );
-    button.dataset.ruleId = rule.id;
-    button.style.setProperty('--house-color', houseColor(rule.house_id));
-    button.style.top = `${top}px`;
-    button.style.height = `${Math.max(3, bottom - top)}px`;
-    elements.verticalChart.append(button);
-  }
+    const label = document.createElement('button');
+    label.type = 'button';
+    label.className = `column-label${polity.status === 'current' ? ' current-indicator' : ''}`;
+    label.dataset.polityId = polity.id;
+    label.style.left = `${x}px`;
+    label.textContent = polity.short_name;
+    label.title = polity.name;
+    label.setAttribute('aria-label', polity.name);
+    label.addEventListener('click', () => {
+      showPolityDetail(polity.id);
+      setDetailOpen(true);
+    });
+    header.append(label);
 
-  const reigns = recordsFor(polity.id, 'reigns');
-  let lastLabelY = -Infinity;
-  for (const reign of reigns) {
-    const person = byId(state.data.persons, reign.person_id);
-    const y = (mobileY(reign.start, start, end) + mobileY(effectiveEnd(reign), start, end)) / 2;
-    const button = elementButton(
-      'vertical-reign',
-      `${person.name}, ${reign.title}, ${formatRange(reign.start, reign.end)}`,
-      () => showReignDetail(reign.id)
-    );
-    button.dataset.reignId = reign.id;
-    button.style.top = `${y}px`;
-    elements.verticalChart.append(button);
-    if (reign.label && reign.importance === 3 && y - lastLabelY >= 25) {
-      const label = document.createElement('span');
-      label.className = 'vertical-reign-label';
-      label.style.top = `${y}px`;
-      label.textContent = person.name;
-      elements.verticalChart.append(label);
-      lastLabelY = y;
+    const lane = document.createElement('div');
+    lane.className = `column-lane${region.style.left === `${x}px` ? ' region-start' : ''}`;
+    lane.style.left = `${x}px`;
+    chart.append(lane);
+
+    for (const phase of recordsFor(polity.id, 'phases')) {
+      const top = columnY(phase.start);
+      const button = elementButton(
+        `vertical-phase${phase.end === null ? ' current' : ''}`,
+        `${phase.name}, ${formatRange(phase.start, phase.end)}`,
+        () => showPhaseDetail(phase.id)
+      );
+      button.dataset.phaseId = phase.id;
+      button.style.left = `${x + 12}px`;
+      button.style.top = `${top}px`;
+      button.style.height = `${Math.max(3, columnY(effectiveEnd(phase)) - top)}px`;
+      chart.append(button);
+    }
+
+    for (const rule of recordsFor(polity.id, 'rules')) {
+      const house = byId(state.data.houses, rule.house_id);
+      const top = columnY(rule.start);
+      const ruleHeight = Math.max(2, columnY(effectiveEnd(rule)) - top);
+      const button = elementButton(
+        'vertical-rule',
+        `${house.name} ruled ${polity.name}, ${formatRange(rule.start, rule.end)}`,
+        () => showRuleDetail(rule.id)
+      );
+      button.dataset.ruleId = rule.id;
+      button.style.setProperty('--house-color', houseColor(rule.house_id));
+      button.style.left = `${x + 15}px`;
+      button.style.top = `${top}px`;
+      button.style.height = `${ruleHeight}px`;
+      if (ruleHeight > 65) button.textContent = house.name;
+      chart.append(button);
+    }
+
+    for (const reign of recordsFor(polity.id, 'reigns')) {
+      const person = byId(state.data.persons, reign.person_id);
+      const top = columnY(reign.start);
+      const bottom = columnY(effectiveEnd(reign));
+      const duration = document.createElement('span');
+      duration.className = 'vertical-reign-duration';
+      duration.setAttribute('aria-hidden', 'true');
+      duration.style.left = `${x + 6}px`;
+      duration.style.top = `${top}px`;
+      duration.style.height = `${Math.max(2, bottom - top)}px`;
+      chart.append(duration);
+      const button = elementButton(
+        `vertical-reign importance-${reign.importance}`,
+        `${person.name}, ${reign.title}, ${formatRange(reign.start, reign.end)}`,
+        () => showReignDetail(reign.id)
+      );
+      button.dataset.reignId = reign.id;
+      button.style.left = `${x + 6}px`;
+      button.style.top = `${(top + bottom) / 2}px`;
+      chart.append(button);
     }
   }
+
+  const namespace = 'http://www.w3.org/2000/svg';
+  const links = document.createElementNS(namespace, 'svg');
+  links.setAttribute('class', 'relationship-layer column-links');
+  links.setAttribute('aria-hidden', 'true');
+  links.setAttribute('width', String(width));
+  links.setAttribute('height', String(height));
+  chart.append(links);
+  const markerSlots = new Map();
+  for (const relationship of [...state.data.relationships].sort((a, b) => a.start - b.start)) {
+    const endpointIds = [...new Set([...relationship.from, ...relationship.to])];
+    const polityId = endpointIds[0];
+    const y = columnY(relationship.start);
+    const slots = markerSlots.get(polityId) || [];
+    let slot = slots.findIndex(previousY => y - previousY >= 20);
+    if (slot < 0) slot = slots.length;
+    slots[slot] = y;
+    markerSlots.set(polityId, slots);
+    const markerX = columnX(polityId) + COLUMN_WIDTH / 2 + 3;
+    const markerY = y + slot * 20;
+    const group = document.createElementNS(namespace, 'g');
+    group.dataset.relationshipId = relationship.id;
+    group.addEventListener('click', () => { showRelationshipDetail(relationship.id); setDetailOpen(true); });
+    for (const id of endpointIds.slice(1)) {
+      const endX = columnX(id) + COLUMN_WIDTH / 2 + 3;
+      const path = document.createElementNS(namespace, 'path');
+      path.setAttribute('class', relationship.type);
+      path.setAttribute('d', `M ${endX} ${y} C ${endX} ${y + 24}, ${markerX} ${markerY + 24}, ${markerX} ${markerY}`);
+      const hit = path.cloneNode();
+      hit.setAttribute('class', 'relationship-hit');
+      group.append(path, hit);
+    }
+    links.append(group);
+    const button = relationshipButton(relationship, endpointIds, polityId);
+    button.style.left = `${markerX}px`;
+    button.style.top = `${markerY}px`;
+    chart.append(button);
+  }
+  syncColumnHeader();
 }
 
 function activeAtYear(year) { return TimelineCore.snapshot(state.data, dataIndex, state.polities, year); }
@@ -659,21 +792,25 @@ function updateCrosshair() {
   elements.crosshair.style.left = `${x}px`;
   elements.crosshair.style.height = `${AXIS_HEIGHT + state.plotHeight}px`;
   elements.crosshair.querySelector('span').textContent = formatYear(state.snapshotYear);
+  for (const item of elements.verticalChart.querySelectorAll('.column-crosshair, .column-crosshair-label')) item.style.top = `${columnY(state.snapshotYear)}px`;
+  const columnLabel = elements.verticalChart.querySelector('.column-crosshair-label');
+  if (columnLabel) columnLabel.textContent = formatYear(state.snapshotYear);
   elements.snapshotYearOutput.textContent = formatYear(state.snapshotYear);
   elements.snapshotYear.value = String(state.snapshotYear);
-  elements.yearInput.value = String(state.snapshotYear);
   elements.snapshotYear.setAttribute('aria-valuetext', formatYear(state.snapshotYear));
 
   const { activeIds } = activeAtYear(state.snapshotYear);
   elements.snapshotSummary.textContent = `${activeIds.size} monarchies shown for this year.`;
 }
 
-function selectSnapshotYear(year, shouldScroll = false, writeUrl = true) {
+function selectSnapshotYear(year, behavior = scrollBehavior(), writeUrl = true) {
   state.snapshotYear = TimelineCore.normalizeYear(year, state.data.meta, state.snapshotYear);
   for (const button of elements.presetButtons.querySelectorAll('button')) button.setAttribute('aria-pressed', String(Number(button.dataset.year) === state.snapshotYear));
   updateCrosshair();
   showSnapshotDetail(writeUrl);
-  if (shouldScroll) elements.plotScroller.scrollTo({ left: Math.max(0, xForYear(state.snapshotYear) - elements.plotScroller.clientWidth / 2), behavior: scrollBehavior() });
+  elements.plotScroller.scrollTo({ left: Math.max(0, xForYear(state.snapshotYear) - elements.plotScroller.clientWidth / 2), behavior });
+  // Dragging the slider must not scroll the page out from under the thumb.
+  if (mobileView() && behavior !== 'instant') scrollColumnsTo(state.snapshotYear, null, behavior);
 }
 
 function rulesForHouse(houseId) {
@@ -690,8 +827,8 @@ function recordUrl(type, id) {
 }
 function syncUrl() {
   const url = new URL(window.location.href);
-  for (const key of ['region', 'coverage', 'status', 'house', 'q', 'connections']) url.searchParams.delete(key);
-  for (const [key, value] of Object.entries({ year: state.snapshotYear, zoom: state.zoom,
+  for (const key of ['region', 'coverage', 'status', 'house', 'q', 'connections', 'zoom']) url.searchParams.delete(key);
+  for (const [key, value] of Object.entries({ year: state.snapshotYear,
     selection: state.selected?.type !== 'snapshot' ? `${state.selected.type}:${state.selected.id}` : '' })) {
     if (value === '') url.searchParams.delete(key);
     else url.searchParams.set(key, String(value));
@@ -716,7 +853,7 @@ function appendItems(container, items) {
       link.href = recordUrl(item.type, item.id); link.textContent = item.label;
       link.addEventListener('click', (event) => {
         if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
-        event.preventDefault(); openRecord(item.type, item.id); elements.detailTitle.focus({ preventScroll: true });
+        event.preventDefault(); jumpToResult(item, true); elements.detailTitle.focus({ preventScroll: true });
       });
       li.append(link);
     }
@@ -725,10 +862,7 @@ function appendItems(container, items) {
 }
 function setDetail({ type, title, dates = '', copy = '', listTitle = '', list = [], sources = [], links = [], groups = [], record = {}, writeUrl = true }) {
   hideRelationshipPreview();
-  const polityId = record.polity_id || (state.selected.type === 'polity' ? record.id : null);
-  if (polityId && polityId !== state.mobilePolityId && state.polities.some(p => p.id === polityId)) {
-    state.mobilePolityId = polityId; elements.mobilePolitySelect.value = polityId; renderVerticalFocus();
-  }
+  updateRelationshipSelection();
   elements.detailType.textContent = type;
   elements.detailTitle.textContent = title;
   elements.detailToggleTitle.textContent = title;
@@ -739,13 +873,13 @@ function setDetail({ type, title, dates = '', copy = '', listTitle = '', list = 
   appendItems(elements.detailList, list.length ? list : ['No entries in this selection.']);
   elements.detailRelated.replaceChildren();
   for (const group of groups.filter(g => g.items.length)) {
-    const section = document.createElement('section'); const heading = document.createElement('h4'); const ul = document.createElement('ul');
+    const section = document.createElement('section'); const heading = document.createElement('h3'); const ul = document.createElement('ul');
     heading.textContent = group.title; appendItems(ul, group.items); section.append(heading, ul); elements.detailRelated.append(section);
   }
   elements.detailWikipedia.replaceChildren();
   elements.detailEvidence.replaceChildren();
   const citations = [...new Map([...(record.sources || []).map(source_id => ({ source_id })), ...(record.citations || [])].map(c => [c.source_id, c])).values()];
-  const heading = document.createElement('h4'); heading.textContent = 'Sources'; elements.detailEvidence.append(heading);
+  const heading = document.createElement('h3'); heading.textContent = 'Sources'; elements.detailEvidence.append(heading);
   if (citations.length) {
     const ul = document.createElement('ul');
     for (const citation of citations) {
@@ -773,7 +907,10 @@ function appendDetailLink(label, url) {
   anchor.target = '_blank'; anchor.rel = 'noreferrer'; anchor.textContent = label;
   elements.detailSources.append(anchor);
 }
-function setDetailOpen(isOpen) {
+let detailOpener = null;
+function setDetailOpen(isOpen, restoreFocus = false) {
+  const wasOpen = elements.detailPanel.open;
+  if (isOpen && !wasOpen) detailOpener = document.activeElement;
   elements.detailPanel.classList.toggle('is-open', isOpen);
   elements.detailPanel.setAttribute('aria-hidden', String(!isOpen));
   elements.detailPanel.inert = !isOpen;
@@ -783,7 +920,13 @@ function setDetailOpen(isOpen) {
   if (isOpen) requestAnimationFrame(() => {
     if (elements.detailPanel.open) elements.detailTitle.focus({ preventScroll: true });
   });
-  if (!isOpen && elements.detailPanel.open) elements.detailPanel.close();
+  if (!isOpen && wasOpen) {
+    elements.detailPanel.close();
+    if (restoreFocus) {
+      const opener = detailOpener?.isConnected && detailOpener.getClientRects().length && !detailOpener.closest('[inert]') ? detailOpener : elements.detailToggle;
+      opener.focus({ preventScroll: true });
+    }
+  }
 }
 function reignLink(reign) {
   return detailLink('reign', reign.id, `${byId(state.data.persons, reign.person_id).name} · ${byId(state.data.polities, reign.polity_id).short_name} · ${formatRange(reign.start, reign.end)}`);
@@ -806,8 +949,6 @@ function showSnapshotDetail(writeUrl = true) {
 function showPolityDetail(polityId) {
   const polity = byId(state.data.polities, polityId);
   const phases = recordsFor(polityId, 'phases');
-  state.mobilePolityId = polityId;
-  if (state.polities.some(p => p.id === polityId)) { elements.mobilePolitySelect.value = polityId; renderVerticalFocus(); }
   state.selected = { type: 'polity', id: polityId };
   setDetail({ type: polity.status === 'current' ? 'Current monarchy' : 'Former monarchy',
     title: polity.name, dates: phases.map(p => formatRange(p.start,p.end)).join(' · '), copy: polity.summary,
@@ -877,42 +1018,38 @@ function bindControls() {
   }, { capture: true, passive: true });
   window.addEventListener('resize', hideRelationshipPreview);
   bindSearch();
-  elements.yearInput.addEventListener('change', event => selectSnapshotYear(event.target.value, true));
-  elements.zoom.addEventListener('change', event => {
-    const selected = state.selected;
-    state.zoom = Number(event.target.value);
-    renderTimeline();
-    if (selected.type === 'snapshot') selectSnapshotYear(state.snapshotYear, true);
-    else jumpToResult(selected, elements.detailPanel.open);
-  });
   // Commit the URL after dragging; per-frame history writes can hit browser rate limits.
-  elements.snapshotYear.addEventListener('input', (event) => selectSnapshotYear(event.target.value, false, false));
+  elements.snapshotYear.addEventListener('input', (event) => selectSnapshotYear(event.target.value, 'instant', false));
   elements.snapshotYear.addEventListener('change', syncUrl);
-  elements.mobilePolitySelect.addEventListener('change', (event) => {
-    state.mobilePolityId = event.target.value;
-    renderVerticalFocus();
-    showPolityDetail(state.mobilePolityId);
-    setDetailOpen(true);
-  });
   elements.detailToggle.addEventListener('click', () => setDetailOpen(true));
   elements.detailClose.addEventListener('click', () => {
-    setDetailOpen(false);
+    setDetailOpen(false, true);
   });
   document.addEventListener('pointerdown', (event) => {
     if (!elements.detailPanel.classList.contains('is-open')) return;
     if (elements.detailPanel.contains(event.target) || elements.detailToggle.contains(event.target)) return;
     setDetailOpen(false);
   });
+  document.addEventListener('click', (event) => {
+    if (event.target.closest('#detail-panel, #detail-toggle, #relationship-tooltip')) return;
+    for (const match of document.querySelectorAll('.search-match')) {
+      if (!match.contains(event.target)) match.classList.remove('search-match');
+    }
+    if (state.selected?.type !== 'relationship' || event.target.closest('[data-relationship-id]')) return;
+    setDetailOpen(false);
+    showSnapshotDetail();
+  }, { capture: true });
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && elements.relationshipTooltip.matches(':popover-open')) {
       hideRelationshipPreview();
       return;
     }
     if (event.key === 'Escape' && elements.detailPanel.classList.contains('is-open')) {
-      setDetailOpen(false);
-      }
+      setDetailOpen(false, true);
+    }
   });
   elements.plotScroller.addEventListener('scroll', syncStickyAxis, { passive: true });
+  elements.verticalScroller.addEventListener('scroll', syncColumnHeader, { passive: true });
 }
 
 function init() {
@@ -921,14 +1058,12 @@ function init() {
     state.plotWidth = Math.round((chartEnd() - chartStart()) * PIXELS_PER_YEAR);
     elements.snapshotYear.min = String(chartStart());
     elements.snapshotYear.max = String(chartEnd());
-    elements.yearInput.min = String(chartStart());
-    elements.yearInput.max = String(chartEnd());
     const searchParams = new URLSearchParams(window.location.search);
     state.snapshotYear = TimelineCore.normalizeYear(searchParams.get('year'), state.data.meta);
-    if (['1','2','4'].includes(searchParams.get('zoom'))) state.zoom=Number(searchParams.get('zoom'));
+    const urlYear = Number(searchParams.get('year'));
+    const requestedYear = Number.isInteger(urlYear) && urlYear !== 0 && urlYear >= chartStart() && urlYear <= chartEnd() ? urlYear : null;
     const requestedSelection = searchParams.get('selection')?.split(':');
     elements.search.value = searchParams.get('q') || '';
-    elements.zoom.value = String(state.zoom);
     renderPresetButtons();
     bindControls();
     renderTimeline();
@@ -936,10 +1071,10 @@ function init() {
     const initialTarget = Math.max(0, xForYear(state.snapshotYear) - elements.plotScroller.clientWidth / 2);
     elements.plotScroller.scrollLeft = initialTarget;
     syncStickyAxis();
-    if (requestedSelection?.length === 2) jumpToResult({ type: requestedSelection[0], id: requestedSelection[1] }, true);
+    if (requestedSelection?.length === 2) jumpToResult({ type: requestedSelection[0], id: requestedSelection[1] }, true, requestedYear);
     else if (searchParams.get('q')) renderSearch();
-    else if (searchParams.get('region') && searchParams.get('region') !== 'all') jumpToResult({ type: 'region', id: searchParams.get('region') });
-    else if (searchParams.get('house') && searchParams.get('house') !== 'all') jumpToResult({ type: 'house', id: searchParams.get('house') });
+    else if (searchParams.get('region') && searchParams.get('region') !== 'all') jumpToResult({ type: 'region', id: searchParams.get('region') }, false, requestedYear);
+    else if (searchParams.get('house') && searchParams.get('house') !== 'all') jumpToResult({ type: 'house', id: searchParams.get('house') }, false, requestedYear);
   } catch (error) {
     elements.error.hidden = false;
     elements.error.textContent = `The timeline could not be loaded. ${error.message}`;

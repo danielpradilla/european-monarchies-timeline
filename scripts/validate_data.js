@@ -24,7 +24,9 @@ function validateData(data, extracts = {}) {
   const year = n => Number.isInteger(n) && n !== 0 && n >= data.meta.start_year && n <= data.meta.end_year;
   const end = r => Core.endYear(r, data.meta);
   if (!Number.isInteger(data.meta.start_year) || !Number.isInteger(data.meta.end_year) || data.meta.start_year === 0 || data.meta.end_year === 0 || data.meta.start_year >= data.meta.end_year) error('meta', '', 'bounds', 'Invalid project year bounds');
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(data.meta.updated || '') || !Number.isFinite(Date.parse(data.meta.updated))) error('meta', '', 'updated', 'Expected a valid snapshot date');
+  const snapshot = new Date(data.meta.updated);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(data.meta.updated || '') || !Number.isFinite(snapshot.valueOf()) || snapshot.toISOString().slice(0,10) !== data.meta.updated) error('meta', '', 'updated', 'Expected a real YYYY-MM-DD calendar date');
+  else if (snapshot.getUTCFullYear() !== data.meta.end_year && !text(data.meta.snapshot_year_note)) warn('meta', '', 'snapshot-year', 'Snapshot year differs from end_year; correct the date/bounds or explain the intentional difference in snapshot_year_note.');
   for (const key of collections) for (const r of data[key]) {
     if (!text(r.id) || ids[key].has(r.id)) error(key, r.id, 'id', 'ID must be present and unique within its collection');
     ids[key].set(r.id, r);
@@ -63,18 +65,22 @@ function validateData(data, extracts = {}) {
     }
     if (r.review_note) warn(key, r.id, 'editorial', r.review_note);
   }
-  const phasesFor = new Map(data.polities.map(p => [p.id, data.phases.filter(r => r.polity_id === p.id).sort((a,b)=>a.start-b.start)]));
+  const phasesFor = new Map(data.polities.map(p => [p.id, data.phases.filter(r => r.polity_id === p.id).sort((a,b)=>a.start-b.start || end(a)-end(b))]));
   for (const p of data.polities) {
     const phases = phasesFor.get(p.id);
     if (!['current','former'].includes(p.status) || ![1,2].includes(p.tier)) error('polities', p.id, 'classification', 'Invalid status or coverage tier');
     if (!phases.length) error('polities', p.id, 'phases', 'Polity has no phase');
     if (p.status === 'current' && !phases.some(r=>r.end===null)) error('polities', p.id, 'ongoing', 'Current polity needs an ongoing phase');
     if (p.status === 'current' && !data.reigns.some(r=>r.polity_id===p.id && r.end===null)) error('polities', p.id, 'sovereign', 'Current polity needs an ongoing sovereign or co-prince reign');
-    for (let i=1;i<phases.length;i++) if (phases[i].start < end(phases[i-1])) error('phases', phases[i].id, 'overlap', 'Institutional phases overlap beyond a shared boundary year');
+    let latestEnd = -Infinity;
+    for (const phase of phases) {
+      if (phase.start < latestEnd) error('phases', phase.id, 'overlap', 'Institutional phases overlap beyond a shared boundary year');
+      latestEnd = Math.max(latestEnd, end(phase));
+    }
   }
-  function covered(r) {
+  function covered(r, periods = phasesFor.get(r.polity_id) || []) {
     let cursor = Core.yearPosition(r.start);
-    for (const p of phasesFor.get(r.polity_id) || []) {
+    for (const p of [...periods].sort((a,b)=>a.start-b.start)) {
       if (Core.yearPosition(p.start) <= cursor && Core.yearPosition(end(p)) >= cursor) cursor = Core.yearPosition(end(p)) + 1;
     }
     return cursor > Core.yearPosition(end(r));
@@ -82,9 +88,19 @@ function validateData(data, extracts = {}) {
   for (const key of ['rules','reigns']) for (const r of data[key]) {
     if (!covered(r)) error(key, r.id, 'phase-coverage', 'Record extends outside the polity’s phases or crosses an institutional gap');
     if (key==='rules' || r.house_id) ref(key, r, 'houses', r.house_id);
+    const house = ids.houses.get(r.house_id);
+    if (house?.kind === 'office' && (!Array.isArray(house.polity_ids) || !house.polity_ids.includes(r.polity_id))) error(key,r.id,'office-scope',`Office ${house.id} is not assigned to polity ${r.polity_id}; check the house and its explicit polity_ids.`);
+    const duplicate = data[key].find(other => other !== r && other.polity_id === r.polity_id && other.house_id === r.house_id && other.start === r.start && other.end === r.end && (key === 'rules' || other.person_id === r.person_id && other.title === r.title));
+    if (duplicate) error(key,r.id,'duplicate-interval',`Exact duplicate interval and assignment also appears in ${duplicate.id}; co-rulers with different people are allowed.`);
     if (key==='reigns') {
       ref(key, r, 'persons', r.person_id);
+      const direct = [...(Array.isArray(r.sources) ? r.sources : []), ...(Array.isArray(r.citations) ? r.citations : []).map(c => c?.source_id)];
+      if (r.end === null && !direct.some(id => ids.sources.get(id)?.type === 'official')) warn(key,r.id,'ongoing-official-source','Ongoing sovereign needs a direct royal, parliamentary, government or equivalent institutional source classified as official; verify the current holder and accession.');
       if (![1,2,3].includes(r.importance) || typeof r.label !== 'boolean') error(key,r.id,'display','Invalid reign importance or label flag');
+      const bands = data.rules.filter(p=>p.polity_id===r.polity_id && p.house_id===r.house_id);
+      const exception = r.house_coverage_exception;
+      if (exception && (exception.house_id !== r.house_id || !year(exception.start) || !year(exception.end) || exception.start < r.start || exception.end > end(r) || exception.start > exception.end || !text(exception.note) || !text(r.note) || !direct.length)) error(key,r.id,'house-exception','House coverage exception must name this house, an interval inside the reign, a specific explanation, a visible reign note and direct supporting citations.');
+      if (r.house_id && !covered(r, exception && exception.house_id === r.house_id ? [...bands,exception] : bands)) error(key,r.id,'house-coverage',`House ${r.house_id} does not cover this reign in ${r.polity_id}; correct the house/band or document the precise co-rule interval with house_coverage_exception.`);
     }
   }
   for (const r of data.relationships) {
@@ -93,6 +109,8 @@ function validateData(data, extracts = {}) {
     if (!Array.isArray(r.from) || !Array.isArray(r.to)) { error('relationships',r.id,'endpoints','Endpoints must be arrays'); continue; }
     if (!r.from.length && !r.to.length) error('relationships',r.id,'endpoints','Relationship needs an endpoint');
     if (r.type==='state_union' && new Set(r.from).size<2) error('relationships',r.id,'union-inputs','A state union needs at least two distinct input polities');
+    const self = r.from.filter(id=>r.to.includes(id));
+    if (self.length && (!text(r.self_endpoint_note) || r.type === 'state_union')) warn('relationships',r.id,'self-endpoint',`Polities occur on both sides: ${self.join(', ')}. Correct the endpoints, or explain a deliberate non-state-union self-link in self_endpoint_note.`);
     for (const id of [...r.from,...r.to]) {
       ref('relationships',r,'polities',id);
       // A 1 January transition can follow a predecessor ending on 31 December.
@@ -104,17 +122,33 @@ function validateData(data, extracts = {}) {
     if (!year(r.year)) error(key,r.id,'year','Year must be within bounds and cannot be zero');
     if (key==='events') {
       if (!Array.isArray(r.polity_ids) || !r.polity_ids.length) error(key,r.id,'polities','Event must identify at least one polity');
-      else for (const id of r.polity_ids) ref(key,r,'polities',id);
+      else for (const id of r.polity_ids) {
+        ref(key,r,'polities',id);
+        if (!(phasesFor.get(id)||[]).some(p=>Core.activeDuring(p,r.year,data.meta)) && !text(r.contextual_polities?.[id])) warn(key,r.id,'event-date',`${id} has no phase active in ${r.year}; correct the date/reference or explain its contextual association in contextual_polities["${id}"].`);
+      }
     }
   }
   for (const p of data.persons) if (!data.reigns.some(r=>r.person_id===p.id)) error('persons',p.id,'orphan','Person has no reign');
   for (const h of data.houses) if (h.kind !== undefined && !['dynasty','office'].includes(h.kind)) error('houses',h.id,'kind','House kind must be dynasty or office');
+  for (const h of data.houses) if (h.kind === 'office' && (!Array.isArray(h.polity_ids) || !h.polity_ids.length || h.polity_ids.some(id=>!ids.polities.has(id)))) error('houses',h.id,'office-scope','Office polity_ids must be a non-empty array of existing polity IDs.');
+  for (const h of data.houses) if (!data.rules.some(r=>r.house_id===h.id) && !data.reigns.some(r=>r.house_id===h.id)) warn('houses',h.id,'orphan-house','House has no rule or reign; connect it or remove the unused record.');
+  const usedSources = new Set(collections.flatMap(k=>data[k].flatMap(r=>[...(Array.isArray(r.sources)?r.sources:[]),...(Array.isArray(r.citations)?r.citations.map(c=>c?.source_id):[])])));
+  for (const s of data.sources) {
+    if (!usedSources.has(s.id)) warn('sources',s.id,'orphan-source','Source is not cited by any record; connect it or remove it.');
+    const duplicate = data.sources.find(other=>other!==s && other.url===s.url);
+    if (duplicate) warn('sources',s.id,'duplicate-source',`URL also appears in ${duplicate.id}; reuse one source record.`);
+  }
+  const targets = new Set(Core.wikipediaTargets(data));
+  for (const title of Object.keys(extracts)) if (!targets.has(title)) warn('extracts',title,'orphan-extract','Cached title has no house/person mapping; check renamed mappings before removing it.');
   for (const key of ['houses','persons']) for (const r of data[key]) {
     const title = r.wikipedia_title || Core.wikipediaTitle(r.url);
     if (!title) { warn(key,r.id,'wikipedia-mapping','No explicit Wikipedia article; the original reference remains available.'); continue; }
     const page = extracts[title];
     if (!page) { warn(key,r.id,'wikipedia-cache',`No cached extract for ${title}`); continue; }
     if (!text(page.text) || page.text.length<40 || page.text.length>1400 || /<\/?[a-z][^>]*>/i.test(page.text) || !Core.wikipediaTitle(page.url) || !Number.isInteger(page.revision_id) || !Number.isInteger(page.page_id) || !Number.isFinite(Date.parse(page.retrieved_at)) || !Number.isFinite(Date.parse(page.revision_at))) error(key,r.id,'wikipedia-extract','Extract must be plain text with a Wikipedia URL, page/revision IDs and timestamps');
+    if (Core.wikipediaTitle(page.url) !== page.title) warn(key,r.id,'wikipedia-provenance','Cached article URL disagrees with its resolved title; verify the refresh response and mapping.');
+    const urlTitle = Core.wikipediaTitle(r.url);
+    if (r.wikipedia_title && urlTitle && urlTitle !== r.wikipedia_title && urlTitle !== page.title && extracts[urlTitle]?.page_id !== page.page_id) warn(key,r.id,'wikipedia-mapping-conflict',`Explicit title ${r.wikipedia_title} conflicts with person URL ${urlTitle}; use the correct article or a verified redirect target.`);
   }
   const report=result();
   report.claims = ['phases','rules','reigns'].reduce((n,k)=>n+data[k].length,0);

@@ -9,7 +9,7 @@ const read=file=>fs.readFileSync(path.join(root,file),'utf8');
 const data=JSON.parse(read('data/timeline.json'));
 const extracts=JSON.parse(read('data/wikipedia-extracts.json'));
 
-test('committed static artifacts match a deterministic validated build',()=>{
+test('working-tree static artifacts match a deterministic validated build',()=>{
   for(const [file,content] of Object.entries(buildArtifacts(data,extracts))) assert.equal(read(file),content,`${file}: run npm run build`);
 });
 test('file-compatible bundle loads both data and cached context',()=>{
@@ -48,7 +48,7 @@ test('editorial examples preserve real inputs and distinguish conquest from unio
 test('published copy explains annual overlap and Wikipedia attribution',()=>{
   const index=read('www/index.html');
   assert.doesNotMatch(index,/same moment|Loading context from Wikipedia/);
-  assert.match(index,/during that year/);
+  assert.match(read('www/methodology.html'),/annual overlap/);
   assert.match(read('www/assets/app.js'),/CC BY-SA 4\.0/);
   assert.doesNotMatch(read('www/assets/app.js'),/fetch\(/);
 });

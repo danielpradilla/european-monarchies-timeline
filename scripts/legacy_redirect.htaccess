@@ -1,0 +1,2 @@
+RewriteEngine On
+RewriteRule ^(?:www(?:/|$))?(.*)$ https://www.danielpradilla.info/projects/european-monarchies-timeline/$1 [R=301,L,NE]

@@ -24,7 +24,7 @@ Named ruling houses. A house is not assumed to be a unified political actor.
 | `id` | string | Stable house identifier |
 | `name` | string | Display name |
 
-Houses may additionally have `kind: "office"` for the papacy and Andorran co-principate. These records retain stable IDs and bands but are excluded from the dynasty selector. `kind` defaults to `dynasty`. `wikipedia_title` is an explicit English article title; optional `summary` is editorial context.
+Houses may additionally have `kind: "office"` for the papacy and Andorran co-principate. Office records declare their permitted `polity_ids` as a non-empty array of existing polity IDs; they retain stable IDs and bands but are labelled as offices in navigation search. `kind` defaults to `dynasty`. `wikipedia_title` is an explicit English article title; optional `summary` is editorial context. Where no separate family article exists, an explicitly identified representative biography may provide context (the Cuza family uses Alexandru Ioan Cuza, its only selected sovereign); the summary must explain this mapping.
 
 ### `polities`
 
@@ -99,6 +99,8 @@ One person's dated tenure in one polity. A person can have several reigns.
 
 Typed connections between polity lanes.
 
+An intentional non-state-union link with the same polity on both sides requires `self_endpoint_note`. This applies to Portugal's restoration: the same crown gained an independent ruler. It is not permission to model a state merging into itself.
+
 Allowed types:
 
 - `composite_monarchy`
@@ -128,6 +130,8 @@ Allowed types:
 
 Contextual dated annotations. Events may involve several polities.
 
+An event normally references a polity active in its year. An earlier or later contextual association requires a specific explanation keyed by polity ID in `contextual_polities`, for example the 1918 annotation's reference to Russia's 1917 revolution. The exception applies only to the named polity.
+
 ### `presets`
 
 The seven story-date buttons used by the interface and article links.
@@ -143,28 +147,38 @@ Phases, rules and reigns may carry:
 
 These fields are also accepted on other records. A polity bibliography is background for its phases and reigns; it is never silently copied into their claim citations. Missing citations are measured editorial debt, not evidence of a completed review.
 
+Reign houses must be covered by matching house bands in the same lane. A titular co-ruler omitted from the simplified governing-house bands may declare `house_coverage_exception: {house_id, start, end, note}` for the specific exceptional interval, with the explanation also in the visible reign note and direct supporting citations. Joanna's retained royal title from 1516 to 1555 is the existing example. George V's continuous reign is instead split at the 1917 house-name change; both segments and house bands explain that this was not a new accession.
+
+Citation locators are optional and identify a verified section, table or page. General annual-boundary and selective-coverage qualifications belong in these model conventions or the record's note; boilerplate is not a locator.
+
 Source classifications are validated: `reference` for general reference works, `specialist_reference` for edited subject-specific references, `scholarly_reference` for academic or scholarly reference works, `official` for institutional publications, and `primary_source` for original documents or archival presentations. Classification describes the source, not a guarantee of truth. Newly reviewed Wikipedia claim citations link to a fixed `oldid` revision; refreshed background excerpts do not silently change that evidence.
+
+An ongoing sovereign reign must cite at least one `official` source directly. Otherwise validation emits an actionable editorial review item to check the current holder and accession against the relevant royal, parliamentary, government or equivalent institutional publication. This checks the source classification and attachment, not the truth of the source's prose.
 
 ## Cached Wikipedia context
 
 `data/wikipedia-extracts.json` maps each explicit requested article title to `title`, `page_id`, `revision_id`, `revision_at`, `retrieved_at`, `url` and a short plain-text `text` excerpt. Redirect targets are retained separately from the requested mapping. Excerpts are shortened and pronunciation-only parentheses are omitted; article, revision and CC BY-SA 4.0 links are displayed alongside them.
 
-`npm run refresh:wikipedia` replaces the cache only after every mapped article resolves to an unambiguous, non-empty page. It never edits the canonical history. `npm run build` is offline and produces the bundle plus data-quality page and JSON report. The imported extracts are separate from original MIT-licensed data.
+`npm run refresh:wikipedia` fetches only missing mapped titles, preserving existing entries verbatim. It writes atomically after every new title resolves to an unambiguous, non-empty article with page/revision attribution from the same API response. It never edits the canonical history. Changing a reviewed excerpt requires a deliberate correction; an ordinary incremental refresh does not recapture it. `npm run build` is offline and produces the bundle plus data-quality page and JSON report. The imported extracts are separate from original MIT-licensed data. Structural checks can detect inconsistent mappings and metadata, but cannot determine whether arbitrary prose belongs to the article; that depends on acquisition provenance and source review.
 
 ## Validation rules
 
 `npm run validate:data` enforces:
 
 - unique IDs within every entity type;
+- real calendar snapshot dates, with a review flag when the snapshot year differs from `end_year` unless `meta.snapshot_year_note` explains an intentional difference;
 - valid HTTPS source and person URLs;
 - valid references among polities, houses, people and sources;
 - integer dates within the project range;
 - `null` ends only for records continuing through an open current-polity phase;
 - rules and reigns fully covered by the union of the polity’s phases, without crossing institutional gaps;
+- compatible reign-house bands, explicitly scoped office houses and no exact duplicate rule/reign intervals; distinct co-rulers and rival houses may overlap;
 - allowed relationship types, valid date ranges, at least one endpoint and endpoint phases active in the transition year (a predecessor may end in the immediately preceding year, accommodating 1 January unions);
 - at least two distinct input polities for state unions;
 - an open phase for every current monarchy;
 - non-empty display text, event/preset dates, citation references and cached-extract provenance.
+
+Review flags identify inactive event references, unexplained self-links, unused sources/houses/cache keys, duplicate source URLs and conflicts between person URLs and explicit Wikipedia titles. Verified redirects are accepted when the resolved article title or cached page identity agrees. These checks expose a narrow, actionable class of contradictions; they do not prove that every historical assignment is true.
 
 The regression suite additionally checks all twelve surviving European monarchies and important historical corrections. Publication coverage counts are reported rather than used as a proxy for correctness.
 

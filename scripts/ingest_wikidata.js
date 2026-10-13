@@ -24,6 +24,7 @@ const realms = [
 async function sparql(query) {
   const url = `${endpoint}?query=${encodeURIComponent(query)}`;
   const response = await fetch(url, {
+    signal: AbortSignal.timeout(30000),
     headers: {
       Accept: 'application/sparql-results+json',
       'User-Agent': 'european-monarchies-timeline/1.0 (https://github.com/danielpradilla/european-monarchies-timeline)'
@@ -45,10 +46,12 @@ function wikidataYear(value) {
 
 async function fetchRealm(realm) {
   const query = `
-SELECT ?person ?personLabel ?position ?positionLabel ?birth ?death ?start ?end WHERE {
+SELECT DISTINCT ?person ?personLabel ?position ?positionLabel ?birth ?death ?start ?end WHERE {
   ?person p:P39 ?statement .
   ?statement ps:P39 ?position .
   ?position (wdt:P1001|wdt:P17) wd:${realm.id} .
+  # Only monarchical offices, not every position associated with the realm.
+  ?position (wdt:P31|wdt:P279)/wdt:P279* wd:Q116 .
   OPTIONAL { ?statement pq:P580 ?start }
   OPTIONAL { ?statement pq:P582 ?end }
   OPTIONAL { ?person wdt:P569 ?birth }
@@ -56,10 +59,11 @@ SELECT ?person ?personLabel ?position ?positionLabel ?birth ?death ?start ?end W
   SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
 }
 ORDER BY ?start ?personLabel
-LIMIT 500
+LIMIT 501
 `;
   const result = await sparql(query);
-  return result.results.bindings.map((binding) => ({
+  const bindings = result.results.bindings;
+  const rows = bindings.slice(0, 500).map((binding) => ({
     realm_id: realm.id,
     polity_id: realm.slug,
     person_id: qid(binding.person.value),
@@ -72,23 +76,25 @@ LIMIT 500
     reign_end: wikidataYear(binding.end?.value),
     person_url: `https://www.wikidata.org/wiki/${qid(binding.person.value)}`
   }));
+  return { rows, truncated: bindings.length > 500 };
 }
 
-async function main() {
+async function main(dataDirectory = path.join(__dirname, '..', 'data')) {
   const candidates = [];
   const summaries = [];
 
   for (const realm of realms) {
     try {
-      const rows = await fetchRealm(realm);
+      const { rows, truncated } = await fetchRealm(realm);
       summaries.push({
         id: realm.slug,
         wikidata: realm.id,
         label: realm.label,
-        candidate_count: rows.length
+        candidate_count: rows.length,
+        truncated
       });
       candidates.push(...rows);
-      console.log(`${realm.label}: ${rows.length} candidate rows`);
+      console.log(`${realm.label}: ${rows.length} candidate rows${truncated ? " (truncated; more results exist)" : ""}`);
     } catch (error) {
       summaries.push({
         id: realm.slug,
@@ -100,6 +106,9 @@ async function main() {
       console.error(`${realm.label}: ${error.message}`);
     }
   }
+
+  const failures = summaries.filter(r => r.error);
+  if (failures.length) throw new Error(`Incomplete ingest: ${failures.length}/${realms.length} realm requests failed. Previous output files preserved; no partial results written.`);
 
   const seen = new Set();
   const deduplicated = candidates.filter((candidate) => {
@@ -115,7 +124,6 @@ async function main() {
     return true;
   });
 
-  const dataDirectory = path.join(__dirname, '..', 'data');
   fs.writeFileSync(
     path.join(dataDirectory, 'wikidata_monarchies.json'),
     `${JSON.stringify(summaries, null, 2)}\n`
@@ -127,7 +135,9 @@ async function main() {
   console.log(`Wrote ${deduplicated.length} review candidates without changing the canonical timeline.`);
 }
 
-main().catch((error) => {
+if (require.main === module) main().catch((error) => {
   console.error(error);
-  process.exit(1);
+  process.exitCode = 1;
 });
+
+module.exports = { fetchRealm, main };

@@ -1,7 +1,7 @@
 // Explicit article titles only. Review the diff before accepting refreshed context.
 const fs = require('node:fs');
 const path = require('node:path');
-const { wikipediaTargets } = require('../www/assets/timeline-core');
+const { wikipediaTargets, wikipediaTitle } = require('../www/assets/timeline-core');
 const root = path.join(__dirname, '..');
 
 function excerpt(text) {
@@ -18,8 +18,9 @@ function excerpt(text) {
 }
 
 async function refresh(data, previous = {}, fetcher = fetch) {
-  const pages = {};
-  const titles = wikipediaTargets(data);
+  const pages = { ...previous };
+  // Existing reviewed excerpts are immutable here; fetch only newly mapped titles.
+  const titles = wikipediaTargets(data).filter(title=>!Object.hasOwn(previous,title));
   for (let offset = 0; offset < titles.length; offset += 20) {
     const batch = titles.slice(offset, offset + 20);
     const params = new URLSearchParams({ action: 'query', format: 'json', formatversion: '2', redirects: '1',
@@ -43,11 +44,10 @@ async function refresh(data, previous = {}, fetcher = fetch) {
       }
       const text = excerpt(page.extract);
       const revision = page.revisions?.[0];
-      if (!revision?.revid || text.length < 40) throw new Error(`Incomplete extract for ${requested}; cache unchanged.`);
+      if (!Number.isInteger(page.pageid) || !Number.isInteger(revision?.revid) || !Number.isFinite(Date.parse(revision?.timestamp)) || wikipediaTitle(page.fullurl) !== page.title || !page.fullurl.startsWith('https://en.wikipedia.org/wiki/') || text.length < 40) throw new Error(`Incomplete extract for ${requested}; cache unchanged.`);
       pages[requested] = { title: page.title, page_id: page.pageid, revision_id: revision.revid,
         revision_at: revision.timestamp, retrieved_at: new Date().toISOString().slice(0, 10),
         url: page.fullurl, text };
-      if (previous[requested]?.revision_id === revision.revid && previous[requested]?.text === text) pages[requested] = previous[requested];
     }
   }
   return pages;

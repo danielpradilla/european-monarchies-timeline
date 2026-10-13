@@ -1,6 +1,6 @@
 <!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Explorer browser checks</title>
 <style>body{font:16px system-ui;margin:24px;color:#20282d}iframe{width:100%;height:520px;border:1px solid #aaa}li{margin:6px 0}.fail{color:#a12a2a}.pass{color:#12614b}</style>
-<h1>Explorer browser checks</h1><p>Serve the repository with <code>npm run test:browser</code>. These checks use the real page, DOM and cached data without external requests.</p><ol id="results"></ol><p id="summary" role="status">Running…</p><iframe id="app" title="Explorer under test"></iframe>
+<h1>Explorer browser checks</h1><p>Serve the repository with <code>npm run serve:tests</code>. These checks use the real page, DOM and cached data without external requests.</p><ol id="results"></ol><p id="summary" role="status">Running…</p><iframe id="app" title="Explorer under test"></iframe>
 <script>
 const frame=document.getElementById('app'),results=document.getElementById('results');let passed=0,failed=0,skipped=0;
 function check(name,test){const li=document.createElement('li');try{if(!test())throw Error('Assertion failed');li.textContent=`PASS · ${name}`;li.className='pass';passed++;}catch(e){li.textContent=`FAIL · ${name}: ${e.message}`;li.className='fail';failed++;}results.append(li);}
@@ -11,16 +11,42 @@ const load=url=>new Promise(resolve=>{frame.onload=resolve;frame.src=url;});
  let doc=frame.contentDocument,win=frame.contentWindow;
  await new Promise(resolve=>win.requestAnimationFrame(()=>win.requestAnimationFrame(resolve)));
  const el=id=>doc.getElementById(id);
- const change=(id,value,type='change')=>{el(id).value=value;el(id).dispatchEvent(new win.Event(type,{bubbles:true}));};
+ const change=(id,value,type='change')=>{el(id).value=value;if(id==='snapshot-year'&&type==='change')el(id).dispatchEvent(new win.Event('input',{bubbles:true}));el(id).dispatchEvent(new win.Event(type,{bubbles:true}));};
  check('data loads and all lanes render',()=>el('timeline-error').hidden&&doc.querySelectorAll('.label-row').length===win.TIMELINE_DATA.polities.length);
  check('terminal dissolutions are visible',()=>!!doc.querySelector('[data-relationship-id="rel-western-fall"]'));
+ check('legend and connection symbols use centred SVG icons independent of font metrics',()=>[...doc.querySelectorAll('.legend-marker,#relationship-controls-layer .relationship-button')].every(mark=>{const svg=mark.querySelector('svg'),r=mark.getBoundingClientRect(),s=svg?.getBoundingClientRect();return svg?.getAttribute('aria-hidden')==='true'&&s.width===12&&s.height===12&&Math.abs(r.x+r.width/2-s.x-s.width/2)<0.1&&Math.abs(r.y+r.height/2-s.y-s.height/2)<0.1;}));
+ const markersFit=()=>{
+  const marks=[...doc.querySelectorAll('#relationship-controls-layer .relationship-button')];
+  return marks.every((mark,i)=>{
+   const r=win.TIMELINE_DATA.relationships.find(r=>r.id===mark.dataset.relationshipId);
+   const row=doc.querySelector(`.plot-row[data-polity-id="${mark.dataset.polityId}"]`);
+   const box=mark.getBoundingClientRect(),lane=row?.getBoundingClientRect();
+   return [...r.from,...r.to].includes(mark.dataset.polityId)&&lane&&box.top>=lane.top+62&&box.bottom<=lane.bottom&&
+    marks.slice(i+1).every(other=>{const b=other.getBoundingClientRect();return box.right<=b.left||b.right<=box.left||box.bottom<=b.top||b.bottom<=box.top;});
+  });
+ };
+ check('all connection symbols sit in an endpoint lane, below ruler labels, without overlapping',()=>doc.querySelectorAll('#relationship-controls-layer .relationship-button').length===win.TIMELINE_DATA.relationships.length&&markersFit());
+ check('Vouillé is attached to the Visigoths rather than Britain',()=>doc.querySelector('#relationship-controls-layer .relationship-button[data-relationship-id="rel-vouille"]').dataset.polityId==='visigothic-kingdom');
+ const regions=[...doc.querySelectorAll('.label-region')].map(b=>b.dataset.region);
+ check('mobile column regions follow the desktop region order',()=>[...doc.querySelectorAll('.column-region')].every((group,i)=>group.dataset.region===regions[i]));
+ for(const region of regions)doc.querySelector(`.label-region[data-region="${region}"]`).click();
+ check('collapsed regions do not leave free-floating connection symbols',()=>doc.querySelectorAll('#relationship-controls-layer .relationship-button').length===0);
+ let collapsedFit=true;
+ for(const region of regions){
+  const toggle=()=>doc.querySelector(`.label-region[data-region="${region}"]`).click();
+  toggle();collapsedFit&&=markersFit();toggle();
+ }
+ check('connection placement remains valid with any one region expanded',()=>collapsedFit);
+ for(const region of regions)doc.querySelector(`.label-region[data-region="${region}"]`).click();
+ win.scrollTo({top:0,behavior:'instant'});
+ await new Promise(resolve=>win.requestAnimationFrame(()=>win.requestAnimationFrame(resolve)));
  const relationship=win.TIMELINE_DATA.relationships.find(r=>r.id==='rel-iberian-union');
- const marker=doc.querySelector('.relationship-button[data-relationship-id="rel-iberian-union"]');
+ const marker=doc.querySelector('#relationship-controls-layer .relationship-button[data-relationship-id="rel-iberian-union"]');
  const line=doc.querySelector('.relationship-layer [data-relationship-id="rel-iberian-union"]');
  const tip=el('relationship-tooltip'),beforeHover=win.location.href;
  const pointer=(target,type)=>target.dispatchEvent(new win.PointerEvent(type,{pointerType:'mouse',clientX:win.innerWidth-2,clientY:win.innerHeight-2}));
  pointer(marker,'pointerenter');
- check('relationship hover explains its type, dates and meaning without opening details',()=>tip.matches(':popover-open')&&['Personal union','1580','1640',relationship.description].every(text=>tip.textContent.includes(text))&&win.location.href===beforeHover&&el('detail-panel').inert);
+ check('relationship hover explains its countries, type, dates and meaning without opening details',()=>tip.matches(':popover-open')&&['Spain','Portugal','Personal union','1580','1640',relationship.description].every(text=>tip.textContent.includes(text))&&win.location.href===beforeHover&&el('detail-panel').inert);
  check('relationship preview fits near the viewport edge',()=>{const r=tip.getBoundingClientRect();return r.left>=0&&r.top>=0&&r.right<=win.innerWidth&&r.bottom<=win.innerHeight;});
  pointer(marker,'pointerleave');pointer(tip,'pointerenter');
  await new Promise(resolve=>setTimeout(resolve,180));
@@ -37,8 +63,30 @@ const load=url=>new Promise(resolve=>{frame.onload=resolve;frame.src=url;});
  check('keyboard focus keeps the explanation visible and accessible',()=>doc.activeElement===marker&&tip.matches(':popover-open')&&marker.getAttribute('aria-label').includes(relationship.description)&&tip.textContent.includes(relationship.description));
  marker.click();
  check('clicking a relationship opens its details and dismisses the preview',()=>!tip.matches(':popover-open')&&!el('detail-panel').inert&&el('detail-title').textContent===relationship.label&&!!el('detail-evidence').querySelector('a'));
+ check('selecting a symbol highlights every branch above dimmed connections',()=>marker.getAttribute('aria-pressed')==='true'&&el('relationship-layer').lastElementChild===line&&[...line.querySelectorAll('path:not(.relationship-hit)')].every(path=>win.getComputedStyle(path).strokeWidth==='3px'&&win.getComputedStyle(path).opacity==='1')&&win.getComputedStyle(line.querySelector('.relationship-hit')).stroke==='rgba(0, 0, 0, 0)'&&win.getComputedStyle(el('relationship-layer').firstElementChild).opacity==='0.2');
+ await new Promise(resolve=>win.requestAnimationFrame(resolve));
+ check('details heading receives focus without a selection-like border',()=>doc.activeElement===el('detail-title')&&win.getComputedStyle(el('detail-title')).outlineStyle==='none');
+ el('detail-title').click();line.querySelector('.relationship-hit').dispatchEvent(new win.MouseEvent('click',{bubbles:true}));
+ check('clicking the selected line or its details preserves selection',()=>line.classList.contains('is-selected')&&marker.getAttribute('aria-pressed')==='true');
  el('detail-close').click();
  await new Promise(resolve=>win.requestAnimationFrame(()=>win.requestAnimationFrame(resolve)));
+ check('Close restores keyboard focus to the opening mark',()=>doc.activeElement===marker);
+ marker.focus();marker.click();
+ await new Promise(resolve=>win.requestAnimationFrame(resolve));
+ doc.dispatchEvent(new win.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+ check('Escape restores focus to the opening mark',()=>doc.activeElement===marker);
+ check('closing details keeps the selected connection highlighted',()=>line.classList.contains('is-selected')&&marker.getAttribute('aria-pressed')==='true');
+ el('plot-canvas').click();
+ check('clicking empty chart space clears the highlight, dimming and shared selection',()=>!el('relationship-layer').classList.contains('has-selection')&&!el('relationship-layer').querySelector('.is-selected')&&marker.getAttribute('aria-pressed')==='false'&&win.getComputedStyle(line).opacity==='1'&&win.getComputedStyle(line.querySelector('path:not(.relationship-hit)')).strokeWidth==='1.4px'&&!new URL(win.location.href).searchParams.has('selection'));
+ marker.click();el('search').click();
+ check('clicking outside also deselects while relationship details are open',()=>el('detail-panel').inert&&!el('relationship-layer').classList.contains('has-selection')&&marker.getAttribute('aria-pressed')==='false');
+ const partition=doc.querySelector('.relationship-layer [data-relationship-id="rel-frankish-partition"]');
+ partition.dispatchEvent(new win.MouseEvent('click',{bubbles:true}));
+ check('clicking a different line transfers the highlight and selected symbol',()=>partition.classList.contains('is-selected')&&!line.classList.contains('is-selected')&&doc.querySelectorAll('.relationship-button[aria-pressed="true"]').length===1&&doc.querySelector('#relationship-controls-layer .relationship-button[aria-pressed="true"]').dataset.relationshipId==='rel-frankish-partition');
+ el('detail-close').click();
+ doc.querySelector('.label-region[data-region="Iberia"]').click();
+ check('clicking a region heading deselects the connection through the redraw',()=>!el('relationship-layer').querySelector('.is-selected')&&!el('relationship-layer').classList.contains('has-selection'));
+ doc.querySelector('.label-region[data-region="Iberia"]').click();
  const firstRow=doc.querySelector('.label-row');
  const searchKey=key=>el('search').dispatchEvent(new win.KeyboardEvent('keydown',{key,bubbles:true,cancelable:true}));
  change('search','Charles V','input');
@@ -49,9 +97,12 @@ const load=url=>new Promise(resolve=>{frame.onload=resolve;frame.src=url;});
  check('arrow keys identify an accessible search result',()=>doc.getElementById(el('search').getAttribute('aria-activedescendant'))?.getAttribute('aria-selected')==='true');
  searchKey('Enter');
  const juan=win.TIMELINE_DATA.reigns.find(r=>r.person_id==='juan-carlos-i');
- check('Enter jumps to the monarch and keeps details out of the way',()=>doc.querySelector('.reign-mark.search-match')?.dataset.reignId===juan.id&&el('year-input').value==='1975'&&el('detail-panel').inert&&el('search-panel').hidden);
+ check('Enter jumps to the monarch and keeps details out of the way',()=>doc.querySelector('.reign-mark.search-match')?.dataset.reignId===juan.id&&el('snapshot-year').value==='1975'&&el('detail-panel').inert&&el('search-panel').hidden);
+ check('selecting another record clears connection highlighting',()=>!el('relationship-layer').classList.contains('has-selection')&&!el('relationship-layer').querySelector('.is-selected')&&!doc.querySelector('#relationship-controls-layer .relationship-button[aria-pressed="true"]'));
  await new Promise(resolve=>setTimeout(resolve,700));
  check('the chosen monarch is visible after scrolling both timeline axes',()=>{const r=doc.querySelector('.reign-mark.search-match').getBoundingClientRect(),plot=el('plot-scroller').getBoundingClientRect();return win.scrollY>0&&r.top>=90&&r.bottom<=win.innerHeight&&r.left>=plot.left&&r.right<=plot.right;});
+ el('plot-canvas').click();
+ check('clicking elsewhere dismisses a monarch jump outline',()=>!doc.querySelector('.search-match'));
  change('search','tudor england','input');el('search-results').firstElementChild.click();
  check('dynasty search jumps to its period without dimming other houses',()=>doc.querySelector('.rule-segment.search-match')?.dataset.houseId==='tudor'&&doc.querySelectorAll('.label-row').length===win.TIMELINE_DATA.polities.length&&!doc.querySelector('.house-filtering'));
  change('search','Iberia','input');el('search-results').firstElementChild.click();
@@ -62,38 +113,95 @@ const load=url=>new Promise(resolve=>{frame.onload=resolve;frame.src=url;});
  check('Escape closes search suggestions without changing the selection',()=>el('search-panel').hidden&&doc.querySelector('.label-row .search-match')?.dataset.polityId==='spain');
  change('search','','input');
  check('clearing search keeps every country and the selected location',()=>el('search-panel').hidden&&doc.querySelector('.label-row')===firstRow&&doc.querySelector('.label-row .search-match')?.dataset.polityId==='spain');
- change('year-input',0);check('year zero is normalized',()=>el('year-input').value==='1');
+ change('snapshot-year',0);check('year zero is normalized',()=>el('snapshot-year').value==='1');
  const beforeDrag=win.location.href;change('snapshot-year',1714,'input');
- check('slider previews without flooding browser history',()=>el('year-input').value==='1714'&&win.location.href===beforeDrag);
+ check('slider previews without flooding browser history',()=>el('snapshot-year').value==='1714'&&win.location.href===beforeDrag);
+ check('dragging the year slider immediately follows the year and clamps at either end',()=>{
+  const plot=el('plot-scroller'),top=win.scrollY;
+  return [el('snapshot-year').min,1000,el('snapshot-year').max,1714].every(year=>{
+   change('snapshot-year',year,'input');
+   const expected=Math.max(0,Math.min(plot.scrollWidth-plot.clientWidth,parseFloat(el('crosshair').style.left)-plot.clientWidth/2));
+   return Math.abs(plot.scrollLeft-expected)<1&&win.scrollY===top&&win.location.href===beforeDrag;
+  });
+ });
+ await new Promise(resolve=>win.requestAnimationFrame(()=>win.requestAnimationFrame(resolve)));
+ check('the sticky year ruler follows the slider pan',()=>Math.abs(new win.DOMMatrix(win.getComputedStyle(el('sticky-axis-layer')).transform).m41+el('plot-scroller').scrollLeft)<1);
  change('snapshot-year',1714);check('slider commits its year to the URL on release',()=>new URL(win.location.href).searchParams.get('year')==='1714');
- change('year-input',1724);el('detail-toggle').click();
+ change('snapshot-year',1724);el('detail-toggle').focus();el('detail-toggle').click();
  check('annual snapshot includes the short reign of Louis I',()=>el('detail-list').textContent.includes('Louis I of Spain'));
  await new Promise(resolve=>win.requestAnimationFrame(()=>win.requestAnimationFrame(resolve)));
  if(win.document.hasFocus()) check('opening details moves keyboard focus into the panel',()=>{if(!el('detail-panel').contains(doc.activeElement))throw Error(`Focus stayed on ${doc.activeElement.id||doc.activeElement.tagName}`);return true;});
  else {const li=document.createElement('li');li.textContent='SKIP · keyboard focus needs an active browser window; rerun this page in a foreground tab.';results.append(li);skipped++;}
- const louis=[...el('detail-list').querySelectorAll('a')].find(a=>a.textContent.includes('Louis I of Spain'));louis.click();
+ check('the snapshot links to Louis I',()=>{const louis=[...el('detail-list').querySelectorAll('a')].find(a=>a.textContent.includes('Louis I of Spain'));if(!louis)return false;louis.click();return true;});
  check('related reign opens without losing the editorial note',()=>el('detail-title').textContent==='Louis I of Spain'&&el('detail-copy').textContent.includes('January'));
+ await new Promise(resolve=>setTimeout(resolve,700));
+ check('a monarch link in details jumps to the highlighted reign and year',()=>{
+  const mark=doc.querySelector('.reign-mark.search-match'),r=mark?.getBoundingClientRect();
+  return mark?.dataset.reignId==='reign-louis-i-spain'&&el('snapshot-year').value==='1724'&&!el('detail-panel').inert&&r.top>=64&&r.bottom<=win.innerHeight&&r.left>=el('plot-scroller').getBoundingClientRect().left&&r.right<el('detail-panel').getBoundingClientRect().left;
+ });
  check('Wikipedia extract is local and attributed',()=>el('detail-wikipedia').textContent.includes('CC BY-SA 4.0')&&el('detail-wikipedia').querySelector('a[href*="oldid="]'));
  check('direct citations are distinct from background reading',()=>el('detail-evidence').textContent.includes('Louis I of Spain')&&!!doc.querySelector('.background-sources'));
  doc.dispatchEvent(new win.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));check('Escape closes and makes the drawer inert',()=>el('detail-panel').inert&&!el('detail-toggle').hidden);
- change('zoom','4');check('zoom increases the timeline width',()=>parseFloat(el('plot-canvas').style.width)>9000);
+ await new Promise(resolve=>win.requestAnimationFrame(resolve));
+ check('Escape returns focus to the reign reached from details',()=>doc.activeElement===doc.querySelector('.reign-mark.search-match'));
+ el('detail-toggle').focus();el('detail-toggle').click();
+ await new Promise(resolve=>win.requestAnimationFrame(resolve));
+ el('detail-close').click();
+ check('Close restores focus to the details toggle',()=>doc.activeElement===el('detail-toggle'));
+ el('detail-toggle').click();
+ await new Promise(resolve=>win.requestAnimationFrame(resolve));
+ el('search').dispatchEvent(new win.PointerEvent('pointerdown',{bubbles:true}));el('search').focus();
+ check('outside dismissal leaves the new control focused',()=>el('detail-panel').inert&&doc.activeElement===el('search'));
  change('search','Spain','input');el('search-results').firstElementChild.click();const shared=win.location.href;
  await load(shared);doc=frame.contentDocument;win=frame.contentWindow;
- check('URL restores the selected country, year and zoom with every row visible',()=>el('year-input').value==='1724'&&doc.querySelector('.label-row .search-match')?.dataset.polityId==='spain'&&el('zoom').value==='4'&&doc.querySelectorAll('.label-row').length===win.TIMELINE_DATA.polities.length);
+ check('URL restores the selected country and year with every row visible',()=>el('snapshot-year').value==='1724'&&doc.querySelector('.label-row .search-match')?.dataset.polityId==='spain'&&doc.querySelectorAll('.label-row').length===win.TIMELINE_DATA.polities.length);
+ check('country details headings also have no focus border',()=>doc.activeElement===el('detail-title')&&win.getComputedStyle(el('detail-title')).outlineStyle==='none');
+ doc.querySelector('.label-region[data-region="Iberia"]').click();
+ const event=win.TIMELINE_DATA.events.find(e=>e.id==='event-nueva-planta');
+ const eventLink=[...el('detail-related').querySelectorAll('a')].find(a=>new URL(a.href).searchParams.get('selection')==='event:'+event.id);
+ eventLink?.click();
+ check('an event link jumps to its year and country, expanding a folded region',()=>!!eventLink&&el('snapshot-year').value===String(event.year)&&el('detail-title').textContent===event.label&&!el('detail-panel').inert&&doc.querySelector('.label-row .search-match')?.dataset.polityId===event.polity_ids[0]&&doc.querySelector('.label-region[data-region="Iberia"]').getAttribute('aria-expanded')==='true');
+ await new Promise(resolve=>setTimeout(resolve,700));
+ check('the event country is visible after the jump',()=>{const r=doc.querySelector('.label-row .search-match')?.getBoundingClientRect();return r&&r.top>=64&&r.bottom<=win.innerHeight;});
+ el('detail-list').querySelector('a').click();
+ const connectionLink=[...el('detail-related').querySelectorAll('a')].find(a=>new URL(a.href).searchParams.get('selection')?.startsWith('relationship:'));
+ const connectionId=new URL(connectionLink.href).searchParams.get('selection').split(':')[1];
+ connectionLink.click();
+ check('a connection link jumps to its symbol and survives outside-click handling',()=>doc.querySelector('.relationship-button.search-match')?.dataset.relationshipId===connectionId&&el('relationship-layer').querySelector('.is-selected')?.dataset.relationshipId===connectionId&&!el('detail-panel').inert);
+ el('plot-canvas').click();
+ check('clicking elsewhere dismisses the connection jump outline as well as its selection',()=>!doc.querySelector('.search-match')&&!el('relationship-layer').classList.contains('has-selection')&&!doc.querySelector('#relationship-controls-layer .relationship-button[aria-pressed="true"]'));
+ for(const selection of ['polity:england','polity:france','house:windsor','region:Iberia','reign:reign-charles-v-spain']){
+  await load('../www/index.html?year=1918&selection='+encodeURIComponent(selection));doc=frame.contentDocument;win=frame.contentWindow;
+  check(`URL preserves explicit year with ${selection}`,()=>el('snapshot-year').value==='1918'&&new URL(win.location.href).searchParams.get('selection')===selection);
+ }
  await load('../www/index.html?region=Iberia&coverage=core-current&status=current&q=juan+carlos');doc=frame.contentDocument;win=frame.contentWindow;
  check('old filter links preserve the search while showing every country',()=>el('search').value==='juan carlos'&&el('search-results').firstElementChild.textContent.includes('Juan Carlos I')&&doc.querySelectorAll('.label-row').length===win.TIMELINE_DATA.polities.length&&!new URL(win.location.href).searchParams.has('coverage'));
  await load('../www/index.html?region=Iberia&status=current');doc=frame.contentDocument;win=frame.contentWindow;
  check('old region links jump to the region instead of filtering',()=>doc.querySelector('.label-region.search-match')?.dataset.region==='Iberia'&&doc.querySelectorAll('.label-row').length===win.TIMELINE_DATA.polities.length);
  await load('../www/index.html?selection=rule:rule-england-normandy');doc=frame.contentDocument;win=frame.contentWindow;
  check('drawer stays within the viewport',()=>{const r=el('detail-panel').getBoundingClientRect();return r.top>=0&&r.bottom<=win.innerHeight;});
+ check('record URL without a year derives the record date',()=>el('snapshot-year').value==='1066');
  check('direct record URLs open an attributed detail',()=>el('detail-title').textContent==='Normandy'&&el('detail-wikipedia').textContent.includes('House of Normandy'));
+ el('detail-close').click();
+ doc.querySelector('.label-region[data-region="Iberia"]').click();
+ check('collapsing a region hides its lanes',()=>doc.querySelectorAll('.label-row').length<win.TIMELINE_DATA.polities.length&&doc.querySelector('.label-region[data-region="Iberia"]').getAttribute('aria-expanded')==='false');
+ change('search','Spain','input');el('search-results').firstElementChild.click();
+ check('search expands a collapsed target region',()=>doc.querySelectorAll('.label-row').length===win.TIMELINE_DATA.polities.length&&doc.querySelector('.label-region[data-region="Iberia"]').getAttribute('aria-expanded')==='true');
  for(const width of [320,760,1200]){
   frame.style.width=width+'px';await new Promise(resolve=>win.requestAnimationFrame(resolve));
   check(`layout stays within ${width}px`,()=>doc.documentElement.scrollWidth<=doc.documentElement.clientWidth);
   if(width===320){
-   check('mobile focus remains usable',()=>win.getComputedStyle(el('vertical-chart')).display!=='none'&&el('mobile-polity-select').options.length===win.TIMELINE_DATA.polities.length);
+   el('detail-close').click();win.scrollTo({top:0,behavior:'instant'});
+   const menu=doc.querySelector('.dp-navbar-menu');menu.open=true;
+   check('all six mobile navigation links can be hit',()=>[...menu.querySelectorAll('a')].every(a=>{const r=a.getBoundingClientRect();return a.contains(doc.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}));
+   check('mobile menu links receive keyboard focus',()=>[...menu.querySelectorAll('a')].every(a=>{a.focus();return doc.activeElement===a;}));
+   menu.open=false;
+   check('details toggle is compact on mobile',()=>el('detail-toggle').getBoundingClientRect().width<100);
+   win.scrollTo({top:doc.body.scrollHeight,behavior:'instant'});
+   check('final mobile marks can scroll clear of the details toggle',()=>Math.max(...[...doc.querySelectorAll('.vertical-phase,.vertical-rule,.vertical-reign')].map(e=>e.getBoundingClientRect().bottom))<el('detail-toggle').getBoundingClientRect().top);
+   check('mobile shows every monarchy as a column',()=>win.getComputedStyle(el('vertical-chart')).display!=='none'&&doc.querySelectorAll('.column-label').length===win.TIMELINE_DATA.polities.length);
    change('search','juan carlos','input');el('search-results').firstElementChild.click();
-   check('mobile search selects the correct country and monarch',()=>el('mobile-polity-select').value==='spain'&&doc.querySelector('.vertical-reign.search-match')?.dataset.reignId===juan.id&&el('detail-panel').inert);
+   check('mobile search selects the correct monarch',()=>doc.querySelector('.vertical-reign.search-match')?.dataset.reignId===juan.id&&el('detail-panel').inert);
   }
  }
  frame.style.width=new URLSearchParams(location.search).get('width')==='320'?'320px':'100%';

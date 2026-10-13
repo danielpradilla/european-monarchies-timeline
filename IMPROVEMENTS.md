@@ -1,27 +1,27 @@
 # Wikipedia reliance and editorial improvement tracker
 
-Assessed 19 September 2026 against the current `data/timeline.json`. This file is the live todo list and the historical record of what was found and fixed. Original findings (18 July 2026) are marked done where the current data/tests confirm the fix; still-open items stay as todos.
+Updated 30 September 2026 against the current `data/timeline.json`. This file preserves the editorial scope and historical record of what was found and fixed. See `TASKS.md` for the consolidated, verified action checklist (reviewed 30 September 2026). Original findings (18 July 2026) are marked done where the current data/tests confirm the fix; still-open items stay as todos.
 
 ## Wikipedia dependency, current numbers
 
-- 390 source records total; 316 (81%) are `en.wikipedia.org` links (`type: reference`). 35 scholarly, 33 official, 3 specialist, 3 primary.
-- 520/520 dated claims (phases, rules, reigns) carry a direct source — but only 61/520 (12%) also carry a specialist, scholarly, official or primary source. The other 459 (88%) are backed only by a general reference, almost always Wikipedia.
-- All 44 relationships and 29 events have specialist or institutional support (upgraded from the July baseline of mostly-Wikipedia).
-- 269 Wikipedia extracts are cached with article, fixed revision ID, retrieval date and CC BY-SA 4.0 attribution — this is sound navigational use, not the concern.
+- 524 source records total; 367 (70%) link to English Wikipedia. Source types: 370 reference, 60 scholarly, 80 official, 10 specialist and 4 primary.
+- 700/700 dated claims have a direct source; 208/700 (30%) also have non-reference support. 492 (70%) rely on general references.
+- All 73 relationships and 38 events have specialist or institutional support. All 13 ongoing reigns have direct official citations.
+- 324 Wikipedia extracts are cached. The original 269 entries are unchanged; only 55 missing mapped articles were fetched.
 
-**Verdict: structurally honest, and the Wikipedia dependency is an accepted scope decision, not a defect.** This is a hobby/public-navigation timeline, not a scholarly prosopography, and `www/quality.html` already discloses the 61/520 specialist figure honestly rather than hiding behind "fact-check complete." Wikipedia is a decent source for this use case. The remaining work is disputed/traditional dates specifically (where a wrong popular claim is more likely) and the one structural gap below — not a general Wikipedia-to-scholarly upgrade campaign.
+**Verdict: structurally honest, and the Wikipedia dependency is an accepted scope decision, not a defect.** This is a hobby/public-navigation timeline, not a scholarly prosopography, and `www/quality.html` already discloses the 208/700 specialist figure honestly rather than hiding behind "fact-check complete." Wikipedia is a decent source for this use case. Ongoing work is evidence maintenance and disputed/traditional dates when new sources change the interpretation — not a general Wikipedia-to-scholarly upgrade campaign.
 
 ## Todo: sourcing, scoped down
 
-- [ ] For the 19 records flagged `date_precision: circa|traditional|disputed`, confirm each has at least one specialist source, not just Wikipedia — this is where a general reference is more likely to be wrong, unlike the routine biographical claims.
-- [ ] Otherwise, no active push to replace general references with scholarly ones — Wikipedia is acceptable for uncontroversial records per the editorial standard below. Upgrade opportunistically if a better source is already on hand, don't go hunting for one.
+- [x] All 30 currently flagged records (`date_precision: circa|traditional|disputed`), including the original 19, have a direct non-reference citation and an explanatory note (checked 30 September 2026). This confirms coverage, not the historical interpretation of each source.
+- Scope decision: no active push to replace general references with scholarly ones — Wikipedia is acceptable for uncontroversial records per the editorial standard below. Upgrade opportunistically if a better source is already on hand, don't go hunting for one.
 - ~~Commission independent regional specialist review~~ — out of scope; not a claim this project makes or needs to make.
 
 ## Todo: remaining structural/editorial gaps
 
-- [ ] Monaco has no separate phase for the 1911/1962 constitutional settlements — only the 1793 French-annexation gap and 1814 restoration are split out. Liechtenstein (1806/1862/1921) and Andorra (1993) already got this treatment; Monaco didn't.
-- [ ] Kalmar (`rel-kalmar`, `union_framework`) and the Polish–Lithuanian connection intentionally represent interrupted frameworks rather than year-by-year shared reigns; add finer intervals only if a concrete exploration question needs them (documented scope limit, not a bug).
-- [ ] Conflicting chronologies remain explicit but unresolved for Danylo, Volodymyr, Yurii II, early Scottish and Norwegian kingship, and medieval Bulgaria — fine as documented uncertainty, revisit if a specialist source settles any of them.
+- [x] Monaco retains its coarse restored-principality phase, with a sourced note explaining the 1911/1962 constitutions and intervening suspension. This records the constitutional changes without implying a monarchy gap.
+- Deferred: Kalmar (`rel-kalmar`, `union_framework`) and the Polish–Lithuanian connection intentionally represent interrupted frameworks rather than year-by-year shared reigns; add finer intervals only if a concrete exploration question needs them (documented scope limit, not a bug).
+- Documented uncertainty: conflicting chronologies remain explicit but unresolved for Danylo, Volodymyr, Yurii II, early Scottish and Norwegian kingship, and medieval Bulgaria — fine as documented uncertainty, revisit if a specialist source settles any of them.
 
 ## Done: July 2026 publication blockers (verified against current data/tests)
 
@@ -30,7 +30,7 @@ Assessed 19 September 2026 against the current `data/timeline.json`. This file i
 - [x] Croatia lane corrected: Trpimirović band no longer runs past its actual end, and the Croatian crown continues through 1918 instead of stopping at 1102.
 - [x] Italian unification reclassified: `rel-sardinia-italy` is `continuity`, with conquest kept separate rather than a neutral bilateral `state_union`.
 - [x] "Same moment" language removed from the public site; current copy says a mark is "active during the year." (`grep` for "at the same moment" / "pivotal year" / "It would also lie" in `www/*.html` returns nothing.)
-- [x] Failing test claim fixed: `npm test` passes 37/37, `npm run validate:data` reports 0 structural errors, 0 open review items.
+- [x] July test claim fixed (historical baseline): `npm test` passed 37/37, `npm run validate:data` reports 0 structural errors, 0 open review items.
 - [x] "Fact-check complete" replaced with an honest public data-quality report (`www/quality.html`) distinguishing structural validation from historical verification.
 
 ## Done: July 2026 high-priority factual/structural items
@@ -43,7 +43,7 @@ Assessed 19 September 2026 against the current `data/timeline.json`. This file i
 - [x] Nueva Planta sequence reclassified as `constitutional_reorganization` rather than `state_union`.
 - [x] Portuguese restoration modeled as ending a union (`restoration`, Portugal → Portugal), not flowing out of Spain.
 - [x] Andorra split at 1993; Liechtenstein split at 1806/1862/1921 (more granular than the original ask).
-- [x] Houses vs. elective offices separated: papacy and Andorran co-principate carry `kind: "office"` and are excluded from the dynasty selector.
+- [x] Houses vs. elective offices separated: papacy and Andorran co-principate carry `kind: "office"` and are labelled as offices in navigation search.
 
 ## Done: data model and validation
 
@@ -53,7 +53,7 @@ Assessed 19 September 2026 against the current `data/timeline.json`. This file i
 
 ## Not re-verified this pass
 
-- Whether every one of the 459 general-reference-only claims is individually still correct — citation coverage confirms traceability, not certified accuracy. Not treated as a blocker; see scope note above.
+- Whether every one of the 492 general-reference-only claims is individually still correct — citation coverage confirms traceability, not certified accuracy. Not treated as a blocker; see scope note above.
 
 ## Editorial standard
 
@@ -90,3 +90,16 @@ Assessed 19 September 2026 against the current `data/timeline.json`. This file i
 The timeline is selective, not a complete ruler list. Annual resolution cannot order events within one year, such as the Hundred Days, the Spanish transitions of 1873–1874 or the Roman Republic of 1849. Medieval territorial boundaries are not encoded. Selected dynasty bands and reigns remain selective, especially in Croatia and fragmented medieval polities.
 
 Use `npm run validate:strict` to prevent new evidence gaps and `npm run report:data` to inspect the generated report. Keep the static model and add finer intervals only when a concrete exploration question and evidence require them.
+
+## 30 September expansion and verification
+
+Mechanical source collection was followed by independent source-content verification and integration using GPT-6 Astra at ultra reasoning. A separate audit checked data constraints, source mappings and the new transition topology. Existing people, houses and citations were reused; the original cached excerpts were preserved.
+
+- Added 25 lanes and extended existing France, Serbia, Bohemia, Prussia and Castile records. The coverage remains a selected set of rulers and house intervals, not a complete succession list.
+- George V's two house associations now meet at 1917 and explicitly describe a continuous reign. Joanna's exceptional titular co-rule is documented over its exact interval.
+- The Romanian sequence separates shared election in 1859, institutional unification in 1862 and kingdom status in 1881. Hanover's occupation and restoration, Saxony's interrupted Polish kingship, and German crowns surviving membership in the German Empire are explained.
+- The Lombard crown continues after the conquest of 774; medieval Italy's later imperial framework is distinguished from a uniformly governed state. Córdoba's rival dynasties, Milan's republican interruption and Tuscany's 1859 monarchy end versus 1860 Sardinian annexation remain explicit.
+- Burgundy's 1477 division and Habsburg inheritance are separated; Arles is a contextual event. Traditional foundations and competing calendar dates retain uncertainty notes and specialist support.
+- Current-sovereign citations, invalid calendar dates, house coverage, duplicate intervals, event context, self-links and source/cache mappings have targeted checks. A passing validator still does not prove arbitrary source prose true.
+
+Historical sources and any precise locators are attached to the relevant canonical records. General-reference evidence remains classified as such. New cache entries contain article/revision attribution; full historical works were not represented as read when only an accessible excerpt or institutional abstract was available.

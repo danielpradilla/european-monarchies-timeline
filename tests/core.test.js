@@ -74,6 +74,15 @@ test('researched coverage keeps distinct crowns, interrupted rule and current su
 const mutations = [
   ['duplicate ID','id',d=>d.persons.push({...d.persons[0]})],
   ['unknown person','reference',d=>d.reigns[0].person_id='missing'],
+  ['wrong existing reign house','house-coverage',d=>d.reigns[0].house_id='windsor'],
+  ['wrong existing rule house','house-coverage',d=>d.rules.find(r=>r.house_id===d.reigns[0].house_id&&r.polity_id===d.reigns[0].polity_id).house_id='windsor'],
+  ['office house outside its polity','office-scope',d=>d.rules[0].house_id='papal'],
+  ['string instead of office polity scope','office-scope',d=>d.houses.find(h=>h.id==='papal').polity_ids='notpapal-vatican'],
+  ['co-rule exception without visible explanation','house-exception',d=>{delete d.reigns.find(r=>r.house_coverage_exception).note;}],
+  ['co-rule exception without evidence','house-exception',d=>{const r=d.reigns.find(r=>r.house_coverage_exception);delete r.citations;delete r.sources;}],
+  ['cloned rule interval','duplicate-interval',d=>d.rules.push({...d.rules[0],id:'cloned-rule'})],
+  ['cloned reign interval','duplicate-interval',d=>d.reigns.push({...d.reigns[0],id:'cloned-reign'})],
+  ['impossible snapshot date','updated',d=>d.meta.updated='2026-02-31'],
   ['unsafe URL','url',d=>d.sources[0].url='javascript:alert(1)'],
   ['unknown source classification','source-type',d=>d.sources[0].type='verified-by-magic'],
   ['missing relationship sources','sources',d=>d.relationships[0].sources=[]],
@@ -91,6 +100,32 @@ const mutations = [
 for(const [name,code,mutate] of mutations) test(`validator rejects ${name}`,()=>{
   const changed=structuredClone(data);mutate(changed);
   assert.ok(validateData(changed,extracts).issues.some(i=>i.severity==='error'&&i.code===code));
+});
+test('validator flags actionable mapping and contextual inconsistencies',()=>{
+  const cases=[
+    ['snapshot-year',d=>d.meta.updated='2099-09-05'],
+    ['event-date',d=>{d.events[0].polity_ids=['united-kingdom'];d.events[0].year=-27;}],
+    ['self-endpoint',d=>d.relationships.find(r=>r.id==='rel-united-kingdom').to.push('ireland')],
+    ['orphan-source',d=>d.sources.push({id:'unused',title:'Unused',url:'https://example.org/unused',type:'reference'})],
+    ['duplicate-source',d=>d.sources.push({...d.sources[0],id:'duplicate-url'})],
+    ['orphan-house',d=>d.houses.push({id:'unused-house',name:'Unused',wikipedia_title:d.houses[0].wikipedia_title})],
+    ['wikipedia-mapping-conflict',d=>{d.persons[0].wikipedia_title=d.houses[0].wikipedia_title;}]
+  ];
+  for(const [code,mutate]of cases){const changed=structuredClone(data);mutate(changed);assert.ok(validateData(changed,extracts).issues.some(i=>i.severity==='review'&&i.code===code),code);}
+  assert.ok(validateData(data,{...extracts,Unreferenced:extracts[Object.keys(extracts)[0]]}).issues.some(i=>i.code==='orphan-extract'));
+  const changed=structuredClone(data);changed.meta.updated='2024-02-29';changed.meta.snapshot_year_note='Intentionally frozen historical snapshot.';
+  assert.ok(!validateData(changed,extracts).issues.some(i=>['updated','snapshot-year'].includes(i.code)));
+});
+test('ongoing sovereigns require direct institutional evidence',()=>{
+  const changed=structuredClone(data),r=changed.reigns.find(r=>r.end===null);
+  r.citations=[{source_id:changed.sources.find(s=>s.type==='reference').id}];delete r.sources;
+  assert.ok(validateData(changed,extracts).issues.some(i=>i.id===r.id&&i.code==='ongoing-official-source'));
+});
+test('annual phases allow several transitions in one year but reject a nested interval',()=>{
+  assert.ok(!validateData(data,extracts).issues.some(i=>i.id==='france-hundred-days'&&i.code==='overlap'));
+  const changed=structuredClone(data);
+  changed.phases.push({...changed.phases.find(p=>p.id==='france-hundred-days'),id:'nested-france-phase',start:1808,end:1808});
+  assert.ok(validateData(changed,extracts).issues.some(i=>i.id==='nested-france-phase'&&i.code==='overlap'));
 });
 test('Wikipedia references are exact article URLs, not search results',()=>{
   assert.equal(Core.wikipediaTitle('https://en.wikipedia.org/wiki/House_of_Habsburg'),'House of Habsburg');
@@ -110,7 +145,10 @@ test('Wikipedia refresh follows explicit redirects and rejects disambiguation an
   assert.equal(cache['Old title'].revision_id,34);
   assert.equal(requested.searchParams.get('titles'),'Old title');
   assert.equal(requested.searchParams.has('generator'),false);
+  assert.deepEqual(await refresh(sample,cache,async()=>{throw new Error('Existing extract must not be fetched');}),cache);
   page.pageprops={disambiguation:''};
   await assert.rejects(refresh(sample,{},fetcher),/unambiguous/);
   await assert.rejects(refresh(sample,{},async()=>({ok:false,status:503})),/cache unchanged/i);
+  delete page.pageprops;page.fullurl='https://en.wikipedia.org/wiki/Unrelated_article';
+  await assert.rejects(refresh(sample,{},fetcher),/incomplete/i);
 });
