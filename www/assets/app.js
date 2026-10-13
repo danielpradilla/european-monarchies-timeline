@@ -75,7 +75,10 @@ const elements = {
   detailCopy: document.getElementById('detail-copy'),
   detailSecondaryTitle: document.getElementById('detail-secondary-title'),
   detailList: document.getElementById('detail-list'),
-  detailSources: document.getElementById('detail-sources')
+  detailSources: document.getElementById('detail-sources'),
+  readingGuide: document.getElementById('reading-guide'),
+  readingGuideOpeners: document.querySelectorAll('.reading-guide-open'),
+  readingGuideClose: document.getElementById('reading-guide-close')
 };
 
 const dataIndex = state.data ? TimelineCore.indexData(state.data) : { ids: {}, byPolity: new Map(), navigation: [] };
@@ -1018,6 +1021,18 @@ function bindControls() {
   }, { capture: true, passive: true });
   window.addEventListener('resize', hideRelationshipPreview);
   bindSearch();
+  elements.readingGuideOpeners.forEach(opener => opener.addEventListener('click', () => {
+    hideRelationshipPreview();
+    elements.readingGuide.showModal();
+  }));
+  elements.readingGuideClose.addEventListener('click', () => elements.readingGuide.close());
+  elements.readingGuide.addEventListener('click', event => {
+    if (event.target !== elements.readingGuide) return;
+    const rect = elements.readingGuide.getBoundingClientRect();
+    if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) {
+      elements.readingGuide.close();
+    }
+  });
   // Commit the URL after dragging; per-frame history writes can hit browser rate limits.
   elements.snapshotYear.addEventListener('input', (event) => selectSnapshotYear(event.target.value, 'instant', false));
   elements.snapshotYear.addEventListener('change', syncUrl);
@@ -1027,11 +1042,12 @@ function bindControls() {
   });
   document.addEventListener('pointerdown', (event) => {
     if (!elements.detailPanel.classList.contains('is-open')) return;
+    if (event.target.closest('#reading-guide, .reading-guide-open')) return;
     if (elements.detailPanel.contains(event.target) || elements.detailToggle.contains(event.target)) return;
     setDetailOpen(false);
   });
   document.addEventListener('click', (event) => {
-    if (event.target.closest('#detail-panel, #detail-toggle, #relationship-tooltip')) return;
+    if (event.target.closest('#detail-panel, #detail-toggle, #relationship-tooltip, #reading-guide, .reading-guide-open')) return;
     for (const match of document.querySelectorAll('.search-match')) {
       if (!match.contains(event.target)) match.classList.remove('search-match');
     }
@@ -1040,6 +1056,7 @@ function bindControls() {
     showSnapshotDetail();
   }, { capture: true });
   document.addEventListener('keydown', (event) => {
+    if (elements.readingGuide.open) return;
     if (event.key === 'Escape' && elements.relationshipTooltip.matches(':popover-open')) {
       hideRelationshipPreview();
       return;

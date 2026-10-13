@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Experiment: seven 1519 reigns forced into a dendrogram</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page: rgb(255, 253, 249);
+    --ink: #000;
+    --ink-soft: #28303d;
+    --muted: #39414d;
+    --secondary: #6d6d6d;
+    --rule: #d1d1d1;
+    --rule-soft: #e5e5e5;
+    --red: #c2413f;
+    --danger: #a12a2a;
+    --danger-soft: #ead0d0;
+    --green: #0f766e;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    color: var(--ink);
+    background: var(--page);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    font-size: 16px;
+    font-weight: 300;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 1180px; margin: 0 auto; padding: 32px 20px 56px; }
+  .kicker { margin: 0 0 6px; color: var(--secondary); font-size: 0.8rem; letter-spacing: 0.06em; text-transform: uppercase; }
+  h1 { margin: 0 0 12px; font-size: clamp(1.7rem, 3.4vw, 2.6rem); font-weight: 300; line-height: 1.1; }
+  h2 { margin: 0 0 8px; font-size: 1.1rem; font-weight: 400; }
+  p, li { max-width: 72ch; color: var(--ink-soft); }
+  a { color: var(--ink-soft); text-underline-offset: 2px; }
+  a:focus-visible, summary:focus-visible, .scroll:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  code { font-family: var(--mono); font-size: 0.86em; }
+
+  figure { margin: 24px 0 8px; border: 1px solid var(--rule); background: #fff; }
+  .scroll { overflow-x: auto; }
+  svg { display: block; width: 100%; min-width: 900px; height: auto; }
+  svg text { font-family: inherit; fill: var(--ink); }
+  .col { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; fill: var(--secondary); }
+  .rule { stroke: var(--rule); stroke-width: 1; }
+  .edge { fill: none; stroke-width: 1.5; }
+  .house { font-size: 15px; font-weight: 600; }
+  .crown { font-size: 13.5px; }
+  .nm { font-size: 15px; font-weight: 600; }
+  .yr { font-size: 13.5px; fill: var(--muted); }
+  .id { font-family: var(--mono); font-size: 11px; fill: var(--secondary); }
+  .note { font-size: 12px; fill: var(--secondary); }
+  .ident { fill: none; stroke: var(--red); stroke-width: 1.5; stroke-dasharray: 5 4; }
+  .ident-t { fill: var(--danger); }
+  .ident-b { font-size: 14px; font-weight: 600; fill: var(--danger); }
+  figcaption { padding: 10px 14px; border-top: 1px solid var(--rule-soft); color: var(--secondary); font-size: 0.85rem; }
+  .hint { display: none; }
+  @media (max-width: 920px) { .hint { display: inline; } }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0; margin-top: 28px; border-top: 1px solid var(--rule); }
+  .grid section { padding: 16px 20px 4px 0; }
+  .grid ul { padding-left: 18px; margin: 0 0 12px; }
+  .grid li { margin-bottom: 8px; }
+  .swatch { display: inline-block; width: 18px; border-top: 2px dashed var(--red); vertical-align: middle; margin-right: 6px; }
+  .grid ul.marks { list-style: none; padding-left: 0; }
+
+  details { margin-top: 20px; border-top: 1px solid var(--rule); padding-top: 12px; }
+  summary { cursor: pointer; color: var(--ink-soft); }
+  details ol { padding-left: 20px; }
+  details li { margin-bottom: 8px; font-size: 0.92rem; }
+  .status { margin-top: 20px; font-size: 0.85rem; color: var(--secondary); }
+  .status.fail { color: var(--danger); background: var(--danger-soft); padding: 8px 10px; }
+</style>
+</head>
+<body>
+<main>
+  <p class="kicker">Initial experiment · made for the post, not a recovered prototype</p>
+  <h1>Seven reigns from 1519, forced into a tree</h1>
+  <p>I tried grouping crowns the dynastic way: one root, then the ruling house, then the crown, then the reign. The seven records below come from the project dataset and were picked for this illustration. They are a sample of who reigned in 1519, not the full list of crowns or rulers.</p>
+
+  <figure>
+    <div class="scroll" tabindex="0" aria-label="Dendrogram, scrolls horizontally on narrow screens">
+      <svg id="tree" viewBox="0 0 1120 590" role="img" aria-labelledby="tree-title tree-desc">
+        <title id="tree-title">Dendrogram of seven reign records active in 1519, grouped by ruling house and crown</title>
+        <desc id="tree-desc">Rendering needs JavaScript.</desc>
+      </svg>
+    </div>
+    <figcaption>House colours match the companion Sankey experiment. Red dashed marks join leaves or branches that are the same person or the same crown; they are not tree edges. <span class="hint">The figure scrolls sideways.</span></figcaption>
+  </figure>
+  <noscript><p>This figure is drawn with JavaScript. The record list under "Sources" has the same data.</p></noscript>
+
+  <div class="grid">
+    <section>
+      <h2>Where the tree splits one identity</h2>
+      <ul class="marks">
+        <li><span class="swatch" aria-hidden="true"></span>Charles V is two leaves. <code>reign-charles-v-hre</code> and <code>reign-charles-v-spain</code> share <code>person_id charles-v</code>, but the hierarchy only knows they sit under the same house.</li>
+        <li><span class="swatch" aria-hidden="true"></span>Spain is two branches. From 1516 Joanna (Trastámara) and Charles (Habsburg) held the Spanish crowns jointly, so the dataset keeps two reigns on <code>polity_id spain</code> and the tree files them under different houses. Spain here is the dataset's composite dynastic phase; Castile and Aragon keep their own records.</li>
+        <li><span class="swatch" aria-hidden="true"></span>Joanna is three leaves, for Castile, Aragon and Spain. The record notes say she kept the royal title while Charles governed. They also call him her son, and this tree has no line for that.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>What a tree cannot draw</h2>
+      <ul>
+        <li>Parents and marriages. A person has two parents, often from two houses, so Charles belongs under Habsburg and next to his Trastámara mother at once.</li>
+        <li>Elections. Charles became King of the Romans by election in 1519. An elective crown can pass between families, and the tree would have to move the whole branch.</li>
+        <li>Unions. One ruler on several crowns, two rulers on one crown, and unions that are interrupted or end while both states carry on all need edges across branches. Add them and the tree becomes a network.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>How to read the marks</h2>
+      <ul>
+        <li>From the dataset: names, IDs, house and crown assignments, years and citations.</li>
+        <li>Layout choices: branch order, the even row spacing and the fixed column for each level. Branch length means nothing; it does not encode time, descent or power.</li>
+        <li>Houses are groupings of reign records. They are not drawn as ancestors of the crowns, and the order of houses is not a ranking.</li>
+      </ul>
+    </section>
+  </div>
+
+  <details>
+    <summary>Sources for the seven records</summary>
+    <ol id="sources"></ol>
+    <p>Data: <a href="https://github.com/danielpradilla/european-monarchies-timeline/blob/2467ecb/data/timeline.json"><code>data/timeline.json</code></a> in the <a href="https://github.com/danielpradilla/european-monarchies-timeline">project repository</a>, dataset updated 2026-09-30. Coverage is selective and claim-level sourcing is still under review.</p>
+  </details>
+
+  <p class="status" id="status" role="status">Self-check has not run.</p>
+</main>
+
+<script>
+// Copied from data/timeline.json (reigns, persons, polities, houses, sources). Array order is the display order.
+const REIGNS = [
+  { id: "reign-charles-v-hre", person: "charles-v", personName: "Charles V", polity: "holy-roman-empire", polityName: "Holy Roman Empire", house: "habsburg", houseName: "Habsburg", start: 1519, end: 1556, title: "King of the Romans; crowned emperor in 1530", cites: [["src-wiki-70716"]] },
+  { id: "reign-charles-v-spain", person: "charles-v", personName: "Charles V", polity: "spain", polityName: "Spain", house: "habsburg", houseName: "Habsburg", start: 1516, end: 1556, title: "King Charles I, jointly with Joanna", cites: [["src-joanna", "Joanna’s joint rule with Charles from 1516"], ["src-wiki-70716"]] },
+  { id: "reign-joanna-spain", person: "joanna-i", personName: "Joanna I of Castile", polity: "spain", polityName: "Spain", house: "trastamara", houseName: "Trastámara", start: 1516, end: 1555, title: "Queen of Castile and Aragon, jointly with Charles", cites: [["src-joanna", "Accession in Castile and joint rule with Charles"], ["src-joanna-crowns", "Queen of Aragon: accession in 1516 and joint reign until 1555"], ["src-wiki-151276"]] },
+  { id: "reign-joanna-castile", person: "joanna-i", personName: "Joanna I of Castile", polity: "castile", polityName: "Castile", house: "trastamara", houseName: "Trastámara", start: 1504, end: 1555, title: "Queen of Castile", cites: [["src-joanna", "Accession in Castile and joint rule with Charles"], ["src-wiki-151276"]] },
+  { id: "reign-joanna-aragon", person: "joanna-i", personName: "Joanna I of Castile", polity: "aragon", polityName: "Aragon", house: "trastamara", houseName: "Trastámara", start: 1516, end: 1555, title: "Queen of Aragon", cites: [["src-joanna", "Accession in Castile and joint rule with Charles"], ["src-joanna-crowns", "Queen of Aragon: accession in 1516 and joint reign until 1555"], ["src-wiki-151276"]] },
+  { id: "reign-henry-viii", person: "henry-viii", personName: "Henry VIII", polity: "england", polityName: "England", house: "tudor", houseName: "Tudor", start: 1509, end: 1547, title: "King of England", cites: [["src-wiki-14187"]] },
+  { id: "reign-francis-i-france", person: "francis-i-france", personName: "Francis I", polity: "france", polityName: "France", house: "valois", houseName: "Valois", start: 1515, end: 1547, title: "King of France", cites: [["src-wiki-50012"]] },
+];
+const SOURCES = {
+  "src-joanna": ["Elizabeth A. Lehfeldt: Joanna I", "https://www.encyclopedia.com/history/encyclopedias-almanacs-transcripts-and-maps/joanna-i-mad-spain-1479-1555"],
+  "src-joanna-crowns": ["Joanna of Castile: royal titles and joint rule", "https://en.wikipedia.org/wiki/Joanna_of_Castile"],
+  "src-wiki-70716": ["Charles V, Holy Roman Emperor — Wikipedia, reviewed 5 September 2026", "https://en.wikipedia.org/wiki/Charles_V,_Holy_Roman_Emperor?oldid=1373191475"],
+  "src-wiki-50012": ["Francis I of France — Wikipedia, reviewed 5 September 2026", "https://en.wikipedia.org/wiki/Francis_I_of_France?oldid=1372510774"],
+  "src-wiki-14187": ["Henry VIII — Wikipedia, reviewed 5 September 2026", "https://en.wikipedia.org/wiki/Henry_VIII?oldid=1372577992"],
+  "src-wiki-151276": ["Joanna of Castile — Wikipedia, reviewed 5 September 2026", "https://en.wikipedia.org/wiki/Joanna_of_Castile?oldid=1372254558"],
+};
+const EXPECTED_IDS = ["reign-charles-v-hre", "reign-charles-v-spain", "reign-francis-i-france", "reign-henry-viii", "reign-joanna-aragon", "reign-joanna-castile", "reign-joanna-spain"];
+// Same palette entries as sankey.html so both illustrations agree.
+const HOUSE_COLOUR = { habsburg: "#3f6d68", trastamara: "#75518c", tudor: "#9a3b32", valois: "#295f73" };
+
+// Layout numbers below are invented for legibility; none of them encode data.
+const X = { root: 96, house: 280, crown: 470, leaf: 640, bracket: 905 }, SPINE = 24, ROW0 = 96, ROW_H = 64, W = 1120, H = 590;
+
+function assert(cond, msg) { if (!cond) throw new Error("Self-check failed: " + msg); }
+const mean = (a) => a.reduce((s, v) => s + v, 0) / a.length;
+const count = (key, value) => REIGNS.filter((r) => r[key] === value).length;
+
+// Tree: root -> house -> crown -> reign leaf, keeping first-seen order.
+const houses = [];
+REIGNS.forEach((r, row) => {
+  let h = houses.find((n) => n.id === r.house);
+  if (!h) houses.push(h = { id: r.house, name: r.houseName, crowns: [] });
+  let c = h.crowns.find((n) => n.id === r.polity);
+  if (!c) h.crowns.push(c = { id: r.polity, name: r.polityName, house: h.id, leaves: [] });
+  c.leaves.push({ ...r, y: ROW0 + row * ROW_H });
+});
+houses.forEach((h) => { h.crowns.forEach((c) => (c.y = mean(c.leaves.map((l) => l.y)))); h.y = mean(h.crowns.map((c) => c.y)); });
+const rootY = mean(houses.map((h) => h.y));
+const crowns = houses.flatMap((h) => h.crowns);
+const leaves = crowns.flatMap((c) => c.leaves.map((l) => ({ ...l, branchHouse: c.house, branchCrown: c.id })));
+
+function rowsOf(key, value) { return leaves.filter((l) => l[key] === value).map((l) => l.y); }
+function contiguous(ys) { return ys.every((y, i) => i === 0 || y - ys[i - 1] === ROW_H); }
+
+function selfCheck() {
+  const ids = leaves.map((l) => l.id);
+  assert(leaves.length === 7, `expected 7 leaves, got ${leaves.length}`);
+  assert(new Set(ids).size === 7, "a reign record appears twice");
+  assert(JSON.stringify([...ids].sort()) === JSON.stringify(EXPECTED_IDS), "leaf IDs differ from the seven selected records");
+  assert(leaves.every((l) => l.branchHouse === l.house && l.branchCrown === l.polity), "a leaf sits under the wrong house or crown");
+  assert(leaves.every((l) => l.start <= 1519 && l.end >= 1519), "a record is not active in 1519");
+  assert(leaves.every((l) => l.cites.every(([s]) => SOURCES[s])), "a citation has no source entry");
+  assert(houses.length === 4 && crowns.length === 7, "expected 4 houses and 7 house-crown branches");
+  // Duplicated real identities must survive as separate leaves/branches, not be merged away.
+  assert(count("person", "charles-v") === 2 && rowsOf("person", "charles-v").length === 2, "Charles V should be two leaves");
+  assert(count("person", "joanna-i") === 3 && rowsOf("person", "joanna-i").length === 3, "Joanna should be three leaves");
+  const spain = crowns.filter((c) => c.id === "spain");
+  assert(spain.length === 2 && new Set(spain.map((c) => c.house)).size === 2, "Spain should sit under two houses");
+  assert(new Set(leaves.map((l) => l.person)).size === 4 && new Set(crowns.map((c) => c.id)).size === 6, "expected 4 persons and 6 crowns");
+  // The identity marks are drawn as brackets/arcs, which only work when the duplicates are adjacent.
+  ["charles-v", "joanna-i"].forEach((p) => assert(contiguous(rowsOf("person", p)), `${p} leaves are not adjacent`));
+  assert(contiguous(spain.map((c) => c.y)), "Spain branches are not adjacent");
+  assert(crowns.every((c) => c.leaves.length === 1), "each house-crown branch should hold one reign");
+}
+
+const range = (r) => `${r.start}–${r.end}`;
+function elbow(px, py, cx, cy, colour) {
+  return `<path class="edge" stroke="${colour}" d="M${px},${py}H${px + SPINE}V${cy}H${cx}"/>`;
+}
+function bracket(person, name, n) {
+  const ys = rowsOf("person", person), y1 = ys[0] - 8, y2 = ys[ys.length - 1] + 8, my = (y1 + y2) / 2, x = X.bracket;
+  return `<path class="ident" d="M${x - 8},${y1}H${x}V${y2}H${x - 8}"/>
+    <text class="ident-b" x="${x + 14}" y="${my - 12}">${name}</text>
+    <text class="ident-t note" x="${x + 14}" y="${my + 6}">one person, ${n} leaves</text>
+    <text class="id" x="${x + 14}" y="${my + 22}">person_id ${person}</text>`;
+}
+
+function render() {
+  const s = [];
+  // Column heads
+  s.push(`<text class="col" x="${X.root + 6}" y="36" text-anchor="end">Root</text>
+    <text class="col" x="${X.house + 6}" y="36" text-anchor="end">Ruling house</text>
+    <text class="col" x="${X.crown + 6}" y="36" text-anchor="end">Crown</text>
+    <text class="col" x="${X.leaf - 6}" y="36">Reign record</text>
+    <text class="col" x="${X.bracket - 8}" y="36">Not a tree edge</text>
+    <line class="rule" x1="16" x2="${W - 16}" y1="52" y2="52"/>`);
+  // Root
+  s.push(`<circle cx="${X.root}" cy="${rootY}" r="5" fill="var(--ink)"/>
+    <text class="house" x="${X.root - 12}" y="${rootY - 2}" text-anchor="end">1519</text>
+    <text class="note" x="${X.root - 12}" y="${rootY + 14}" text-anchor="end">7 records</text>`);
+  for (const h of houses) {
+    const col = HOUSE_COLOUR[h.id];
+    s.push(elbow(X.root, rootY, X.house, h.y, "#8a8a8a"));
+    s.push(`<text class="house" fill="${col}" style="fill:${col}" x="${X.house - 10}" y="${h.y - 8}" text-anchor="end">${h.name}</text>
+      <circle cx="${X.house}" cy="${h.y}" r="4.5" fill="${col}"/>`);
+    for (const c of h.crowns) {
+      const l = c.leaves[0];
+      s.push(elbow(X.house, h.y, X.crown, c.y, col));
+      s.push(`<path class="edge" stroke="${col}" d="M${X.crown},${c.y}H${X.leaf}"/>
+        <text class="crown" x="${X.crown - 10}" y="${c.y - 8}" text-anchor="end">${c.name}</text>
+        <circle cx="${X.crown}" cy="${c.y}" r="4" fill="${col}"/>
+        <circle cx="${X.leaf}" cy="${l.y}" r="5" fill="var(--page)" stroke="${col}" stroke-width="2"/>
+        <text x="${X.leaf + 14}" y="${l.y + 5}"><tspan class="nm">${l.personName}</tspan><tspan class="yr" dx="10">${range(l)}</tspan></text>
+        <text class="id" x="${X.leaf + 14}" y="${l.y + 22}">${l.id}</text>`);
+    }
+  }
+  // Non-tree identity marks
+  const [s1, s2] = crowns.filter((c) => c.id === "spain").map((c) => c.y), mid = (s1 + s2) / 2;
+  s.push(`<path class="ident" d="M${X.crown + 4},${s1 + 4}C${X.crown + 70},${s1 + 14} ${X.crown + 70},${s2 - 14} ${X.crown + 4},${s2 - 4}"/>
+    <text class="ident-b" x="${X.crown + 64}" y="${mid - 1}">same crown</text>
+    <text class="id" x="${X.crown + 64}" y="${mid + 14}">polity_id spain</text>`);
+  s.push(bracket("charles-v", "Charles V", 2), bracket("joanna-i", "Joanna I", 3));
+  // Footnote inside the image so exported screenshots keep it
+  const fy = ROW0 + 6 * ROW_H + 62;
+  s.push(`<line class="rule" x1="16" x2="${W - 16}" y1="${fy - 22}" y2="${fy - 22}"/>
+    <text class="note" x="16" y="${fy}">Grouping only. Each level has a fixed column and rows are evenly spaced, so branch length says nothing about time, descent or power.</text>
+    <text class="note" x="16" y="${fy + 18}">Houses group reign records by the house the dataset assigns; they are not ancestors of the crowns. Seven selected records from data/timeline.json, not every crown in 1519.</text>`);
+  const svg = document.getElementById("tree");
+  svg.insertAdjacentHTML("beforeend", s.join(""));
+  document.getElementById("tree-desc").textContent =
+    "Root 1519 branches to four houses. Habsburg: Holy Roman Empire, Charles V 1519–1556; Spain, Charles V 1516–1556. " +
+    "Trastámara: Spain, Joanna I of Castile 1516–1555; Castile, Joanna 1504–1555; Aragon, Joanna 1516–1555. " +
+    "Tudor: England, Henry VIII 1509–1547. Valois: France, Francis I 1515–1547. " +
+    "Dashed marks show that Charles V appears as two leaves, Joanna as three, and Spain under two houses.";
+}
+
+function renderSources() {
+  document.getElementById("sources").innerHTML = REIGNS.map((r) => `<li><code>${r.id}</code>: ${r.personName}, ${r.title}, ${range(r)}. ` +
+    r.cites.map(([id, loc]) => `<a href="${SOURCES[id][1]}">${SOURCES[id][0]}</a>${loc ? ` (${loc})` : ""}`).join("; ") + "</li>").join("");
+}
+
+const status = document.getElementById("status");
+try {
+  selfCheck();
+  render();
+  renderSources();
+  status.textContent = "Self-check passed: 7 leaves with 7 unique reign IDs matching the selection, 4 persons, 4 houses, 6 crowns; charles-v kept as 2 leaves, joanna-i as 3, spain under 2 houses.";
+} catch (err) {
+  status.textContent = err.message;
+  status.classList.add("fail");
+  throw err;
+}
+</script>
+</body>
+</html>

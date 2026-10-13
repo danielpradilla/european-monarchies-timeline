@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sankey experiment: seven reigns in 1519 with invented widths</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page: rgb(255, 253, 249);
+    --paper-soft: #f7f7f5;
+    --ink: #000000;
+    --ink-soft: #28303d;
+    --muted: #39414d;
+    --secondary: #6d6d6d;
+    --rule: #d1d1d1;
+    --rule-soft: #e5e5e5;
+    --blue: #2f5f7f;
+    --blue-soft: #d1dfe4;
+    --warning: #7a6100;
+    --warning-soft: #f1e7bd;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--ink); font: 300 15px/1.5 var(--font); }
+  main { max-width: 960px; margin: 0 auto; padding: 28px 24px 48px; }
+  .eyebrow { margin: 0 0 6px; color: var(--secondary); font-size: 12px; letter-spacing: .04em; text-transform: uppercase; }
+  h1 { margin: 0 0 10px; font-size: 26px; font-weight: 400; line-height: 1.25; }
+  h2 { margin: 32px 0 8px; font-size: 17px; font-weight: 500; }
+  p { margin: 0 0 12px; max-width: 70ch; color: var(--ink-soft); }
+  code { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink-soft); }
+  a { color: var(--blue); }
+  a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+  .warning { margin: 18px 0; padding: 12px 14px; max-width: none; border: 1px solid var(--warning-soft); border-left: 3px solid var(--warning); background: #faf5e1; color: var(--ink); }
+  .warning strong { font-weight: 600; }
+  .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 0 0 10px; }
+  .controls > span { color: var(--muted); font-size: 13px; }
+  .segmented { display: inline-flex; border: 1px solid var(--rule); background: var(--page); }
+  .segmented button { min-height: 36px; padding: 6px 14px; border: 0; border-right: 1px solid var(--rule); border-radius: 0; background: transparent; color: var(--ink-soft); font: 400 14px var(--font); cursor: pointer; }
+  .segmented button:last-child { border-right: 0; }
+  .segmented button:hover { background: var(--paper-soft); }
+  .segmented button[aria-pressed="true"] { background: var(--blue-soft); color: var(--blue); font-weight: 500; }
+  #status { margin: 0; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+  figure { margin: 0; padding: 14px 0 10px; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+  #chart { min-height: 400px; }
+  #chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+  svg text { font-family: var(--font); fill: var(--ink); }
+  svg .lbl { font-size: 12px; font-weight: 500; }
+  svg .val { font-weight: 300; fill: var(--muted); }
+  svg .head { font-size: 11px; fill: var(--secondary); letter-spacing: .04em; text-transform: uppercase; }
+  svg .note { font-size: 11px; font-style: italic; fill: var(--warning); }
+  svg .linklbl { font-size: 11px; font-weight: 400; paint-order: stroke; stroke: var(--page); stroke-width: 3px; stroke-linejoin: round; }
+  svg .link { fill-opacity: .34; }
+  figcaption { margin-top: 8px; color: var(--secondary); font-size: 12px; }
+  .table-wrap { overflow-x: auto; border-top: 1px solid var(--rule); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 7px 8px; border-bottom: 1px solid var(--rule-soft); text-align: left; vertical-align: top; }
+  th { color: var(--secondary); font-weight: 400; font-size: 12px; white-space: nowrap; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td.years, td code { white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .swatch { display: inline-block; width: 9px; height: 9px; margin-right: 6px; vertical-align: baseline; }
+  details { margin-top: 18px; border-top: 1px solid var(--rule); padding-top: 10px; }
+  summary { cursor: pointer; color: var(--ink-soft); }
+  details ol { padding-left: 22px; color: var(--ink-soft); font-size: 13px; }
+  details li { margin-bottom: 8px; }
+  .meta { color: var(--secondary); font-size: 12px; }
+  @media (max-width: 600px) {
+    main { padding: 20px 14px 40px; }
+    h1 { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <p class="eyebrow">Initial experiment · Made for the post, not a recovered prototype</p>
+  <h1>A Sankey of 1519 needs a number the data doesn't have</h1>
+  <p>Four ruling houses on the left, six crowns on the right, joined by seven reigns that were running in 1519. The houses, crowns and reigns are real records from the timeline's dataset. The widths are mine: the dataset has no quantity for these links, so a Sankey has nothing to measure.</p>
+
+  <p class="warning"><strong>The widths are invented layout units.</strong> They do not measure territory, population, revenue, armies or power. The two buttons swap one made-up set of weights for another. The seven links stay the same records, and the picture changes anyway.</p>
+
+  <div class="controls">
+    <span id="weights-label">Link weights</span>
+    <div class="segmented" role="group" aria-labelledby="weights-label">
+      <button type="button" data-weights="equal" aria-pressed="true">Equal: 1 per reign</button>
+      <button type="button" data-weights="habsburg3" aria-pressed="false">Habsburg links ×3</button>
+    </div>
+    <p id="status" aria-live="polite"></p>
+  </div>
+
+  <figure>
+    <div id="chart"><noscript><p>The chart needs JavaScript. The reigns are listed in <code>data/timeline.json</code>.</p></noscript></div>
+    <figcaption>Selected house-to-crown affiliations through reigns active in 1519, from <code>data/timeline.json</code>. Numbers in brackets are the invented weights. Link colour shows the house.</figcaption>
+  </figure>
+
+  <h2>What the chart gets wrong</h2>
+  <p>This is a selection of crowns and rulers alive in 1519, not all of them. Each link is a reign record that assigns a person and a crown to a house. Nothing moves from left to right, and the links say nothing about territory changing hands, descent or two states merging.</p>
+  <p>The records also repeat people. Charles V draws two links and Joanna draws three, so the Sankey counts each of them more than once. Spain takes a link from each house because the dataset keeps a Spain lane for the dynastic monarchy of 1479 to 1716 next to Castile and Aragon, which kept separate institutions. Joanna held the royal titles until 1555, while Charles exercised government and, from 1516, shared the titles with her. A Sankey adds the two Spain links together, as if the crown were twice as big.</p>
+  <p>With equal weights the chart is a count of records. Triple the Habsburg links and the Habsburgs fill more than half the drawing. No record changed between the two views.</p>
+
+  <h2>The seven reign records</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Reign ID</th><th>Person</th><th>House → crown</th><th>Title in the record</th><th>Years</th><th class="num">Invented weight</th><th>Sources</th></tr></thead>
+      <tbody id="reign-rows"></tbody>
+    </table>
+  </div>
+
+  <details>
+    <summary>Sources and provenance</summary>
+    <ol id="source-list"></ol>
+    <p class="meta">Records copied from <code>data/timeline.json</code> of <a href="https://www.danielpradilla.info/projects/european-monarchies-timeline/">The Braided Crowns of Europe</a>, dataset updated 30 September 2026. Coverage is selective, and claim-level sourcing and regional review are still in progress (<a href="https://www.danielpradilla.info/projects/european-monarchies-timeline/methodology.html">methodology</a>, <a href="https://github.com/danielpradilla/european-monarchies-timeline">GitHub</a>). Reign IDs, names, titles, years and citations come from the dataset. Weights, colours and positions were made for this page.</p>
+  </details>
+</main>
+
+<script>
+// Copied from data/timeline.json (updated 2026-09-30). Only the weights below are invented.
+const HOUSES = [
+  { id: 'habsburg', name: 'Habsburg', color: '#3f6d68' },
+  { id: 'trastamara', name: 'Trastámara', color: '#75518c' },
+  { id: 'tudor', name: 'Tudor', color: '#9a3b32' },
+  { id: 'valois', name: 'Valois', color: '#295f73' }
+];
+const CROWNS = [
+  { id: 'holy-roman-empire', name: 'Holy Roman Empire', wrap: ['Holy Roman', 'Empire'] },
+  { id: 'spain', name: 'Spain', wrap: ['Spain'], note: ['two links,', 'one crown'] },
+  { id: 'castile', name: 'Kingdom and Crown of Castile', wrap: ['Kingdom and', 'Crown of Castile'] },
+  { id: 'aragon', name: 'Crown of Aragon', wrap: ['Crown of', 'Aragon'] },
+  { id: 'england', name: 'Kingdom of England', wrap: ['Kingdom of', 'England'] },
+  { id: 'france', name: 'French Monarchy', wrap: ['French', 'Monarchy'] }
+];
+const SOURCES = {
+  'src-wiki-70716': { title: 'Charles V, Holy Roman Emperor — Wikipedia, reviewed 5 September 2026', url: 'https://en.wikipedia.org/wiki/Charles_V,_Holy_Roman_Emperor?oldid=1373191475' },
+  'src-joanna': { title: 'Elizabeth A. Lehfeldt: Joanna I', url: 'https://www.encyclopedia.com/history/encyclopedias-almanacs-transcripts-and-maps/joanna-i-mad-spain-1479-1555' },
+  'src-wiki-151276': { title: 'Joanna of Castile — Wikipedia, reviewed 5 September 2026', url: 'https://en.wikipedia.org/wiki/Joanna_of_Castile?oldid=1372254558' },
+  'src-joanna-crowns': { title: 'Joanna of Castile: royal titles and joint rule', url: 'https://en.wikipedia.org/wiki/Joanna_of_Castile' },
+  'src-wiki-14187': { title: 'Henry VIII — Wikipedia, reviewed 5 September 2026', url: 'https://en.wikipedia.org/wiki/Henry_VIII?oldid=1372577992' },
+  'src-wiki-50012': { title: 'Francis I of France — Wikipedia, reviewed 5 September 2026', url: 'https://en.wikipedia.org/wiki/Francis_I_of_France?oldid=1372510774' }
+};
+const JOANNA_CITES = [['src-joanna', 'Accession in Castile and joint rule with Charles'], ['src-joanna-crowns', 'Queen of Aragon: accession in 1516 and joint reign until 1555'], ['src-wiki-151276']];
+const REIGNS = [
+  { id: 'reign-charles-v-hre', person: 'Charles V', house: 'habsburg', crown: 'holy-roman-empire', title: 'King of the Romans; crowned emperor in 1530', start: 1519, end: 1556, cites: [['src-wiki-70716']] },
+  { id: 'reign-charles-v-spain', person: 'Charles V', house: 'habsburg', crown: 'spain', title: 'King Charles I, jointly with Joanna', start: 1516, end: 1556, cites: [['src-joanna', 'Joanna’s joint rule with Charles from 1516'], ['src-wiki-70716']] },
+  { id: 'reign-joanna-spain', person: 'Joanna I of Castile', short: 'Joanna', house: 'trastamara', crown: 'spain', title: 'Queen of Castile and Aragon, jointly with Charles', start: 1516, end: 1555, cites: JOANNA_CITES },
+  { id: 'reign-joanna-castile', person: 'Joanna I of Castile', short: 'Joanna', house: 'trastamara', crown: 'castile', title: 'Queen of Castile', start: 1504, end: 1555, cites: [['src-joanna', 'Accession in Castile and joint rule with Charles'], ['src-wiki-151276']] },
+  { id: 'reign-joanna-aragon', person: 'Joanna I of Castile', short: 'Joanna', house: 'trastamara', crown: 'aragon', title: 'Queen of Aragon', start: 1516, end: 1555, cites: JOANNA_CITES },
+  { id: 'reign-henry-viii', person: 'Henry VIII', house: 'tudor', crown: 'england', title: 'King of England', start: 1509, end: 1547, cites: [['src-wiki-14187']] },
+  { id: 'reign-francis-i-france', person: 'Francis I', house: 'valois', crown: 'france', title: 'King of France', start: 1515, end: 1547, cites: [['src-wiki-50012']] }
+];
+// The only invented numbers on the page.
+const WEIGHTS = {
+  equal: { label: 'Equal weights', of: () => 1 },
+  habsburg3: { label: 'Habsburg links ×3', of: reign => reign.house === 'habsburg' ? 3 : 1 }
+};
+
+const HEIGHT = 400, TOP = 44, PLOT = 344, GAP = 16, NODE_W = 10;
+const sum = (list, f) => list.reduce((total, item) => total + f(item), 0);
+const houseIndex = id => HOUSES.findIndex(h => h.id === id);
+const crownIndex = id => CROWNS.findIndex(c => c.id === id);
+
+function layout(weightKey, width) {
+  const narrow = width < 620;
+  const xHouse = narrow ? 100 : 120;
+  const xCrown = width - (narrow ? 124 : 214) - NODE_W;
+  const links = REIGNS.map(reign => ({ reign, value: WEIGHTS[weightKey].of(reign) }));
+  const total = sum(links, l => l.value);
+  // One px-per-unit for both columns; the six-crown column has the most gaps, so it sets the scale.
+  const k = (PLOT - (CROWNS.length - 1) * GAP) / total;
+  links.forEach(l => { l.width = l.value * k; });
+  const column = (nodes, key, x, order) => {
+    const placed = nodes.map(n => {
+      const own = links.filter(l => l.reign[key] === n.id).sort((a, b) => order(a) - order(b));
+      return { ...n, x, links: own, value: sum(own, l => l.value), h: sum(own, l => l.width) };
+    });
+    let y = TOP + (PLOT - sum(placed, n => n.h) - (placed.length - 1) * GAP) / 2;
+    for (const n of placed) {
+      n.y = y;
+      let edge = y;
+      for (const l of n.links) { l[key === 'house' ? 'sy' : 'ty'] = edge; edge += l.width; }
+      y += n.h + GAP;
+    }
+    return placed;
+  };
+  const houses = column(HOUSES, 'house', xHouse, l => crownIndex(l.reign.crown));
+  const crowns = column(CROWNS, 'crown', xCrown, l => houseIndex(l.reign.house));
+  return { narrow, width, total, k, links, houses, crowns, xHouse, xCrown };
+}
+
+function selfCheck(width) {
+  const assert = (ok, message) => { if (!ok) throw new Error(`Sankey self-check failed: ${message}`); };
+  const near = (a, b) => Math.abs(a - b) < 1e-9;
+  const expectedIds = 'reign-charles-v-hre,reign-charles-v-spain,reign-joanna-spain,reign-joanna-castile,reign-joanna-aragon,reign-henry-viii,reign-francis-i-france';
+  for (const key of Object.keys(WEIGHTS)) {
+    const g = layout(key, width);
+    assert(g.links.every(l => l.value > 0), 'every weight is positive');
+    assert(near(sum(g.houses, n => n.value), g.total) && near(sum(g.crowns, n => n.value), g.total), 'source total = target total = link total');
+    for (const [nodes, start] of [[g.houses, 'sy'], [g.crowns, 'ty']]) {
+      for (const n of nodes) {
+        assert(n.links.length > 0 && near(n.h, n.value * g.k), `${n.id} height equals its link widths`);
+        let edge = n.y;
+        for (const l of n.links) { assert(near(l[start], edge), `${l.reign.id} stacks flush at ${n.id}`); edge += l.width; }
+        assert(near(edge, n.y + n.h), `${n.id} links fill the node exactly`);
+      }
+      nodes.slice(1).forEach((n, i) => assert(n.y >= nodes[i].y + nodes[i].h, `${n.id} does not overlap the node above`));
+    }
+    const perHouse = Object.fromEntries(g.houses.map(n => [n.id, n.links.length]));
+    assert(JSON.stringify(perHouse) === '{"habsburg":2,"trastamara":3,"tudor":1,"valois":1}', 'link counts per house');
+    assert(g.crowns.length === 6 && g.crowns.every(n => n.links.length > 0), 'six crowns, each with at least one link');
+    assert(g.links.map(l => l.reign.id).join() === expectedIds, `same seven reign IDs in state ${key}`);
+  }
+  document.documentElement.dataset.selfcheck = 'pass';
+}
+
+function render(weightKey) {
+  const chart = document.getElementById('chart');
+  const width = Math.max(320, Math.round(chart.clientWidth));
+  const g = layout(weightKey, width);
+  const colorOf = id => HOUSES[houseIndex(id)].color;
+  const x0 = g.xHouse + NODE_W, x1 = g.xCrown, xm = (x0 + x1) / 2;
+  const parts = [];
+  parts.push(`<text class="head" x="0" y="16">Houses · ${g.total}</text>`);
+  parts.push(`<text class="head" x="${xm}" y="${g.narrow ? 32 : 16}" text-anchor="middle">${g.narrow ? 'Reign (invented weight)' : `${REIGNS.length} reign records (invented weight)`}</text>`);
+  parts.push(`<text class="head" x="${g.xCrown}" y="16">Crowns · ${g.total}</text>`);
+  for (const l of g.links) {
+    const { sy, ty, width: w } = l;
+    const d = `M${x0},${sy}C${xm},${sy} ${xm},${ty} ${x1},${ty}L${x1},${ty + w}C${xm},${ty + w} ${xm},${sy + w} ${x0},${sy + w}Z`;
+    parts.push(`<path class="link" data-reign-id="${l.reign.id}" data-value="${l.value}" fill="${colorOf(l.reign.house)}" d="${d}"><title>${l.reign.id}</title></path>`);
+  }
+  for (const l of g.links) {
+    const name = l.reign.short || l.reign.person;
+    const text = g.narrow ? `${name} (${l.value})` : `${name}, ${l.reign.start}–${l.reign.end} (${l.value})`;
+    parts.push(`<text class="linklbl" x="${xm}" y="${(l.sy + l.ty + l.width) / 2 + 4}" text-anchor="middle">${text}</text>`);
+  }
+  for (const n of g.houses) {
+    parts.push(`<rect class="node" data-node-id="${n.id}" data-value="${n.value}" x="${g.xHouse}" y="${n.y}" width="${NODE_W}" height="${n.h}" fill="${n.color}"/>`);
+    parts.push(`<text class="lbl" x="${g.xHouse - 8}" y="${n.y + n.h / 2 + 4}" text-anchor="end">${n.name} <tspan class="val">(${n.value})</tspan></text>`);
+  }
+  for (const n of g.crowns) {
+    parts.push(`<rect class="node" data-node-id="${n.id}" data-value="${n.value}" x="${g.xCrown}" y="${n.y}" width="${NODE_W}" height="${n.h}" fill="#28303d"/>`);
+    const lines = g.narrow ? n.wrap : [n.name];
+    const note = n.note || [];
+    const tx = g.xCrown + NODE_W + 8;
+    let y = n.y + n.h / 2 - ((lines.length + note.length - 1) * 14) / 2 + 4;
+    lines.forEach((line, i) => {
+      const value = i === lines.length - 1 ? ` <tspan class="val">(${n.value})</tspan>` : '';
+      parts.push(`<text class="lbl" x="${tx}" y="${y}">${line}${value}</text>`);
+      y += 14;
+    });
+    note.forEach(line => { parts.push(`<text class="note" x="${tx}" y="${y}">${line}</text>`); y += 14; });
+  }
+  const habsburg = g.houses[0].value;
+  const desc = `${WEIGHTS[weightKey].label}. ${g.total} invented units leave the four houses and ${g.total} arrive at the six crowns. Habsburg links take ${habsburg} of ${g.total}.`;
+  chart.innerHTML = `<svg id="sankey" viewBox="0 0 ${width} ${HEIGHT}" width="${width}" height="${HEIGHT}" role="img" aria-labelledby="sankey-title sankey-desc" data-weights="${weightKey}" data-total="${g.total}">
+    <title id="sankey-title">Sankey of four houses and six crowns through seven reigns active in 1519, with invented link weights</title>
+    <desc id="sankey-desc">${desc}</desc>${parts.join('')}</svg>`;
+  document.getElementById('status').textContent =
+    `${g.total} invented units in, ${g.total} out. Habsburg share of the drawing: ${habsburg} of ${g.total} (${Math.round(100 * habsburg / g.total)}%).`;
+  document.querySelectorAll('[data-weight-cell]').forEach(cell => {
+    cell.textContent = WEIGHTS[weightKey].of(REIGNS.find(r => r.id === cell.dataset.weightCell));
+  });
+}
+
+function fillTables() {
+  const order = Object.keys(SOURCES);
+  const crownName = id => CROWNS[crownIndex(id)].name;
+  document.getElementById('reign-rows').innerHTML = REIGNS.map(r => {
+    const house = HOUSES[houseIndex(r.house)];
+    const cites = [...r.cites].sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0])).map(([id, locator]) =>
+      `<a href="${SOURCES[id].url}" title="${SOURCES[id].title}${locator ? ': ' + locator : ''}">[${order.indexOf(id) + 1}]</a>`).join(' ');
+    return `<tr><td><code>${r.id}</code></td><td>${r.person}</td><td><span class="swatch" style="background:${house.color}"></span>${house.name} → ${crownName(r.crown)}</td><td>${r.title}</td><td class="years">${r.start}–${r.end}</td><td class="num" data-weight-cell="${r.id}"></td><td>${cites}</td></tr>`;
+  }).join('');
+  document.getElementById('source-list').innerHTML = order.map(id => {
+    const used = REIGNS.flatMap(r => r.cites.filter(([sid]) => sid === id).map(([, locator]) => `<code>${r.id}</code>${locator ? ` (${locator})` : ''}`));
+    return `<li><a href="${SOURCES[id].url}">${SOURCES[id].title}</a> <code>${id}</code><br>Cited by ${used.join(', ')}</li>`;
+  }).join('');
+}
+
+let current = 'equal';
+document.querySelectorAll('[data-weights]').forEach(button => button.addEventListener('click', () => {
+  current = button.dataset.weights;
+  document.querySelectorAll('[data-weights]').forEach(b => b.setAttribute('aria-pressed', String(b === button)));
+  render(current);
+}));
+fillTables();
+selfCheck(Math.max(320, document.getElementById('chart').clientWidth));
+render(current);
+new ResizeObserver(() => render(current)).observe(document.getElementById('chart'));
+</script>
+</body>
+</html>

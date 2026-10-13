@@ -6,7 +6,7 @@
   <meta name="description" content="Why European monarchical history needs a timeline, a network and a few careful editorial choices.">
   <meta name="theme-color" content="#fffdf9">
   <title>The Braided Crowns of Europe</title>
-  <link rel="icon" href="assets/crown.svg" type="image/svg+xml"><link rel="stylesheet" href="assets/styles.css?v=20261001d">
+  <link rel="icon" href="assets/crown.svg" type="image/svg+xml"><link rel="stylesheet" href="assets/styles.css?v=20261013-nav">
 </head>
 <body>
   <a class="skip-link" href="#essay-title">Skip to essay</a>
@@ -14,20 +14,18 @@
     <a class="dp-navbar-brand" href="/projects/">Daniel Pradilla</a>
     <nav class="dp-navbar-links" aria-label="Site navigation">
       <a href="index.html">Explore</a>
-      <a href="methodology.html">Methodology</a>
-      <a aria-current="page" href="blog.html">Essay</a>
+      <a href="/blog/the-braided-crowns-of-europe/">Essay</a>
       <a href="quality.html">Data quality</a>
-      <a href="/blog/">Blog</a>
+      <a href="/blog/the-braided-crowns-of-europe/">Blog</a>
       <a href="https://github.com/danielpradilla/european-monarchies-timeline">GitHub</a>
     </nav>
     <details class="dp-navbar-menu">
       <summary aria-label="Menu">&#9776;</summary>
       <nav aria-label="Site navigation (mobile)">
         <a href="index.html">Explore</a>
-        <a href="methodology.html">Methodology</a>
-        <a aria-current="page" href="blog.html">Essay</a>
+        <a href="/blog/the-braided-crowns-of-europe/">Essay</a>
         <a href="quality.html">Data quality</a>
-        <a href="/blog/">Blog</a>
+        <a href="/blog/the-braided-crowns-of-europe/">Blog</a>
         <a href="https://github.com/danielpradilla/european-monarchies-timeline">GitHub</a>
       </nav>
     </details>
@@ -100,9 +98,9 @@
     <p>The curated records live in one file, <code>data/timeline.json</code>; cached Wikipedia excerpts are kept separately in <code>data/wikipedia-extracts.json</code>. A deterministic build produces a compact data bundle and a data-quality report. A validator checks IDs, dates, references, transition endpoints, citation links and Wikipedia provenance, and regression tests protect fixes that took some work to get right, like the English Interregnum, Monaco's gap during French annexation, Majorian's house assignment and the 1917 to 1922 run of imperial collapses. The tests check structural consistency and application behaviour, not historical accuracy. The site is static, with no database or application server.</p>
 
     <h2>Sources</h2>
-    <p>Notes, Wikipedia context and source citations do different jobs. A note explains how a record is drawn. A citation points to a source, and where possible to the section or page. A polity's general bibliography is background reading and is never quietly treated as proof of each reign.</p>
-    <p>A fact-check in July added official archives, royal institutions, national scholarly encyclopedias and institutional histories for current, disputed and structurally important claims. A sourcing pass in September then attached a direct citation to every dated phase, house period and selected reign, 700 claims in all, and references beyond Wikipedia to every event and connection. Of the 700 dated claims, 208 also cite a specialist, scholarly, institutional or primary source; the rest rely on general references such as Wikipedia. Nearly all Wikipedia citations point to a fixed revision, but only a few name a section or table. Wikipedia excerpts come from explicitly mapped articles and are stored with their revision and retrieval date.</p>
-    <p>That makes the claims traceable. An attached citation doesn't prove the source supports every detail, and none of this is a full specialist review of each region. If you want to use the chart as evidence for a detailed historical claim, check the <a href="quality.html">data-quality report</a> first.</p>
+    <p>The timeline uses Wikipedia alongside scholarly references and institutional histories, including Elizabeth A. Lehfeldt's <a href="https://www.encyclopedia.com/history/encyclopedias-almanacs-transcripts-and-maps/joanna-i-mad-spain-1479-1555">"Joanna I"</a>, the <em>Encyclopedia of Ukraine</em>'s <a href="https://www.encyclopediaofukraine.com/display.asp?linkpath=pagesKYKyivanRushDA">"Kyivan Rus’"</a>, Treccani's <a href="https://www.treccani.it/enciclopedia/regno-di-napoli_%28Dizionario-di-Storia%29/">"Kingdom of Naples"</a>, the Royal Household's <a href="https://www.royal.uk/interregnum-1649-1660">history of the Interregnum</a>, and the Archive of the Crown of Aragon's <a href="https://www.cultura.gob.es/archivos-aca/ca/actividades/documentos-para-la-historia-de-europa/nueva-planta.html">1716 Nueva Planta decree</a>.</p>
+    <p>Each dated phase, house period and selected reign has a direct citation: 700 claims in total, of which 208 also cite a specialist, scholarly, institutional or primary source. Individual references appear in each record's detail panel. General bibliographies provide background reading; notes explain periodization and drawing conventions. Wikipedia citations usually identify a fixed revision, and cached excerpts retain their revision and retrieval date.</p>
+    <p>Citation coverage does not establish historical accuracy. The <a href="quality.html">data-quality report</a> documents sourcing coverage and limitations; the project has not undergone a complete specialist review.</p>
 
     <h2>Navigating the timeline</h2>
     <p>Lane labels, phase bars, house bands, reign dots and connector symbols are all buttons, so you can click them or reach them with the keyboard. Selecting one fills a detail panel with a short explanation, linked records and references, so hover is never the only way in. Search finds realms, rulers and dynasties and jumps to them without hiding the surrounding rows. Preset buttons open 843, 1066, 1519, 1707, 1815, 1918 and 2026. The year and the selected record are written into the URL, so a shared link opens the same moment. On screens 760 pixels wide or narrower the chart is transposed: time runs down the page, each monarchy becomes a column, and the connectors run between columns. Line styles, symbols and labels carry the meaning alongside colour, and motion is reduced when the operating system asks for it.</p>

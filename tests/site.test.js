@@ -24,7 +24,6 @@ test('production pages resolve navigation and assets, including cache-versioned 
       const url=match[1];if(/^(?:https?:|#|\/)/.test(url))continue;
       assert.ok(fs.existsSync(path.join(root,'www',url.split(/[?#]/)[0])),`${page}: missing ${url}`);
     }
-    assert.match(html,/aria-current="page"/);
     assert.match(html,/quality\.html/);
   }
 });

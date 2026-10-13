@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>European Monarchies Timeline — Prototype</title>
+  <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+  <style>body{font-family:system-ui,Segoe UI,Helvetica,Arial;margin:20px}</style>
+</head>
+<body>
+  <h1>Prototype timeline (Vega-Lite)</h1>
+  <p>This is a lightweight prototype showing monarchies as horizontal bars from start_year to end_year. Data loaded from ../data/sample_monarchies.json</p>
+  <div id="vis"></div>
+
+  <script>
+    const spec = {
+      "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+      "width": 900,
+      "height": 200,
+      "data": {"url": "../data/sample_monarchies.json"},
+      "mark": "bar",
+      "encoding": {
+        "y": {"field": "name", "type": "nominal", "axis": {"labelAngle": 0}},
+        "x": {"field": "start_year", "type": "quantitative", "title": "Year"},
+        "x2": {"field": "end_year"},
+        "color": {"field": "region", "type": "nominal"},
+        "tooltip": [
+          {"field": "name", "type": "nominal"},
+          {"field": "start_year", "type": "quantitative", "title": "Start"},
+          {"field": "end_year", "type": "quantitative", "title": "End"}
+        ]
+      }
+    };
+
+    vegaEmbed('#vis', spec, {actions:false});
+  </script>
+</body>
+</html>

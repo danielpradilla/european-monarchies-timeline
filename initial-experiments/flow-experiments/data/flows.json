@@ -1,0 +1,8 @@
+[
+  { "id":"roman-west","label":"Roman Empire (W)", "region":"Italy", "start":-27, "end":476, "color":"#1f77b4" },
+  { "id":"byzantine","label":"Byzantine Empire", "region":"Balkans", "start":330, "end":1453, "color":"#ff7f0e" },
+  { "id":"england","label":"Kingdom of England", "region":"Britain", "start":927, "end":1707, "color":"#2ca02c" },
+  { "id":"france","label":"Kingdom of France", "region":"Western Europe", "start":843, "end":1792, "color":"#d62728" },
+  { "id":"hre","label":"Holy Roman Empire", "region":"Central Europe", "start":800, "end":1806, "color":"#9467bd" },
+  { "id":"castile","label":"Crown of Castile", "region":"Iberia", "start":1230, "end":1715, "color":"#8c564b" }
+]

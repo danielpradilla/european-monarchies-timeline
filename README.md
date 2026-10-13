@@ -4,6 +4,10 @@ A source-backed interactive timeline of major European monarchies from the Roman
 
 The production site combines a horizontal desktop overview with a transposed mobile timeline: time runs down the page and each monarchy is a column. Political phases, ruling houses, selected reigns and typed relationships are stored separately so that personal unions, partitions, restorations and multi-crown monarchs can be represented without pretending they form a simple family tree or quantitative Sankey flow.
 
+“How to read this” in the top navigation (inside Menu on phones) opens an annotated example of Scotland, England and Great Britain from 1590 to 1735. It explains phase bars, house bands, reign marks, connection symbols and annual overlap. Close, Escape or a backdrop click dismisses the guide without changing the selected record or year; the diagram scrolls sideways on narrow screens. The surrounding timeline is not a focus target; keyboard focus indicators remain on its controls.
+
+Essay and Blog use the WordPress post permalink, `/blog/the-braided-crowns-of-europe/`. That address is unavailable while the post remains a draft.
+
 ## Current coverage
 
 - 78 polity lanes
@@ -15,7 +19,7 @@ The production site combines a horizontal desktop overview with a transposed mob
 - 38 contextual events
 - All 12 surviving sovereign European monarchies
 
-The canonical dataset is `data/timeline.json`. See `DATA_MODEL.md` for the schema, `TASKS.md` for the action checklist, `IMPROVEMENTS.md` for editorial scope and review history, and `www/methodology.html` for the public editorial rules.
+The canonical dataset is `data/timeline.json`. See `DATA_MODEL.md` for the schema, `TASKS.md` for the action checklist, and `www/methodology.html` for the public editorial rules.
 
 ## Run locally
 
@@ -42,7 +46,7 @@ npm run validate:strict   # Fails on unresolved editorial items as well as error
 npm run serve:tests      # Then open http://127.0.0.1:8001/tests/browser.html
 ```
 
-The browser harness checks the real explorer, linked details, search navigation without filtering, URL restoration, cached extracts and layouts at 320, 760 and 1200 pixels. It is a manual browser check; CI runs the Node suite. It also covers explicit-year links, mobile menu access, detail focus return and region collapse. Keyboard focus requires a foreground browser window and is explicitly skipped in inactive/background windows.
+The browser harness checks the real explorer, linked details, search navigation without filtering, URL restoration, cached extracts and layouts at 320, 760 and 1200 pixels. It is a manual browser check; CI runs the Node suite. It also covers explicit-year links, mobile menu access, detail focus return, region collapse and reading-guide dismissal without losing the current selection. Keyboard focus requires a foreground browser window and is explicitly skipped in inactive/background windows.
 
 **Passing tests establish structural consistency, not historical accuracy.** The [data-quality page](www/quality.html) lists missing direct citations and known modelling limitations. All 700 dated claims have direct citations; regional specialist review remains an ongoing editorial responsibility.
 
@@ -59,6 +63,7 @@ www/methodology.html     Scope, sources and editorial decisions
 www/quality.html         Generated per-record editorial review queue
 www/blog.html            Accompanying long-form essay
 www/data/                Generated static data bundle
+initial-experiments/     Recovered prototypes and new chart experiments for the post
 ```
 
 ## Publishing
@@ -88,6 +93,10 @@ Each person or house points to an explicit Wikipedia title (or an existing artic
 ## Extending the timeline
 
 Add records and citations to `data/timeline.json`, reuse stable IDs, and run the build and checks. Ordinary lanes also represent short-lived predecessors, keeping one graph model. The explorer builds ID, polity and search indexes once; there is no backend, framework or runtime dependency. Sicily, Naples and the Two Sicilies have separate lanes. The expanded coverage includes Iberian predecessor kingdoms and Islamic monarchies, Gothic and Lombard Italy, the medieval Italian crown, selected German and Italian territorial monarchies, Balkan principalities, Finland and Iceland. France and Bohemia reuse their existing lanes; Brandenburg and ducal Prussia stay separate so their shared ruler does not imply a state merger. Add finer dates or more selected reigns only when the sources support them; record known limits in notes.
+
+## Design experiments
+
+[Dendrogram](initial-experiments/dendrogram.html) groups seven selected 1519 reigns by house and crown, exposing duplicated people and crowns. [Sankey](initial-experiments/sankey.html) keeps those seven associations while switching between explicitly invented ribbon weights. These two pages were created for the post, not recovered from the early commits. They run without external libraries; their groupings and widths do not measure descent, chronology or political power.
 
 ## License
 

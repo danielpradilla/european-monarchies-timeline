@@ -4,3 +4,6 @@ dist/
 .DS_Store
 data/wikidata_candidates.json
 data/wikidata_monarchies.json
+/REDDIT.md
+/POST.md
+/IMPROVEMENTS.md
