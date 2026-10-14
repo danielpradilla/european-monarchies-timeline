@@ -1,9 +1,10 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const vm = require('node:vm');
 const test = require('node:test');
-const { buildArtifacts } = require('../scripts/build_site_data');
+const { buildArtifacts, writeArtifact } = require('../scripts/build_site_data');
 const root=path.join(__dirname,'..');
 const read=file=>fs.readFileSync(path.join(root,file),'utf8');
 const data=JSON.parse(read('data/timeline.json'));
@@ -12,6 +13,44 @@ const extracts=JSON.parse(read('data/wikipedia-extracts.json'));
 test('working-tree static artifacts match a deterministic validated build',()=>{
   for(const [file,content] of Object.entries(buildArtifacts(data,extracts))) assert.equal(read(file),content,`${file}: run npm run build`);
 });
+test('artifact publication creates and replaces complete files without temporary leftovers',t=>{
+  const directory=fs.mkdtempSync(path.join(os.tmpdir(),'monarchy-build-'));
+  t.after(()=>fs.rmSync(directory,{recursive:true,force:true}));
+  const file=path.join(directory,'artifact.json');
+  for(const content of ['first artifact\n','replacement with Unicode: ñ\n','']){
+    writeArtifact(file,content);
+    assert.equal(fs.readFileSync(file,'utf8'),content);
+    assert.deepEqual(fs.readdirSync(directory),['artifact.json']);
+  }
+});
+for(const stage of ['write','rename']){
+  test(`artifact publication preserves the previous target and cleans up after ${stage} failure`,t=>{
+    const directory=fs.mkdtempSync(path.join(os.tmpdir(),'monarchy-build-'));
+    t.after(()=>fs.rmSync(directory,{recursive:true,force:true}));
+    const file=path.join(directory,'artifact.json');
+    fs.writeFileSync(file,'previous artifact\n');
+    const failure=new Error(`${stage} failed`);
+    if(stage==='write'){
+      const write=fs.writeFileSync;
+      t.mock.method(fs,'writeFileSync',(descriptor)=>{
+        write(descriptor,'partial replacement');
+        assert.equal(fs.readFileSync(file,'utf8'),'previous artifact\n');
+        throw failure;
+      });
+    }else{
+      t.mock.method(fs,'renameSync',(temporary,target)=>{
+        assert.equal(path.dirname(temporary),directory);
+        assert.equal(target,file);
+        assert.equal(fs.readFileSync(temporary,'utf8'),'replacement artifact\n');
+        assert.equal(fs.readFileSync(file,'utf8'),'previous artifact\n');
+        throw failure;
+      });
+    }
+    assert.throws(()=>writeArtifact(file,'replacement artifact\n'),error=>error===failure);
+    assert.equal(fs.readFileSync(file,'utf8'),'previous artifact\n');
+    assert.deepEqual(fs.readdirSync(directory),['artifact.json']);
+  });
+}
 test('file-compatible bundle loads both data and cached context',()=>{
   const context={window:{}};vm.runInNewContext(read('www/data/timeline-data.js'),context);
   assert.equal(JSON.stringify(context.window.TIMELINE_DATA),JSON.stringify(data));

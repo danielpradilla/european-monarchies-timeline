@@ -6,7 +6,7 @@
   <meta name="description" content="Explore European monarchies and their rulers from 27 BCE to 2026.">
   <meta name="theme-color" content="#fffdf9">
   <title>The Braided Crowns of Europe</title>
-  <link rel="icon" href="assets/crown.svg" type="image/svg+xml"><link rel="stylesheet" href="assets/styles.css?v=20261014-playhead-focus">
+  <link rel="icon" href="assets/crown.svg" type="image/svg+xml"><link rel="stylesheet" href="assets/styles.css?v=20261014-lean-rendering">
 </head>
 <body>
   <a class="skip-link" href="#search">Skip to the timeline</a>
@@ -74,7 +74,6 @@
           <div class="label-column" id="label-column"></div>
           <div class="plot-scroller" id="plot-scroller">
             <div class="plot-canvas" id="plot-canvas">
-              <div class="axis-layer" id="axis-layer"></div>
               <div class="lane-layer" id="lane-layer"></div>
               <svg class="relationship-layer" id="relationship-layer" aria-hidden="true"></svg>
               <div class="relationship-controls-layer" id="relationship-controls-layer"></div>
@@ -85,7 +84,7 @@
       </div>
 
       <div class="mobile-timeline">
-        <p class="status-line">Time runs down the page: scroll up or down to change year, or swipe sideways for more monarchies. Tap any mark for details.</p>
+        <p class="status-line">Scroll vertically to change year; swipe sideways to browse monarchies. Tap a house band to highlight its crowns, then Details to read about it. Other marks open details.</p>
         <div class="column-header" id="column-header"><div class="column-header-track" id="column-header-track"></div></div>
         <div class="vertical-scroller" id="vertical-scroller">
           <div class="vertical-chart" id="vertical-chart" role="group" tabindex="-1" aria-label="Vertical timeline of European monarchies, one column per monarchy"></div>
@@ -247,8 +246,8 @@
           <section class="reading-guide-use" aria-labelledby="reading-guide-use-title">
             <h3 id="reading-guide-use-title">Using the chart</h3>
             <dl>
-              <div><dt>Select</dt><dd>Click or tap any bar, band, dot or symbol for its dates, details and sources. With a mouse or keyboard, hover over or focus a symbol for a quick summary.</dd></div>
-              <div><dt>Houses</dt><dd>Click or tap a coloured house band to highlight every monarchy that house rules in the “Europe in” year; the others fade but stay usable. A new selection moves the year to the period’s start if needed. Change the year and the highlight follows. Click the band again, click an empty part of the chart, or press Escape to clear it. Selecting a ruler from another house also clears it; a ruler from the selected house keeps it.</dd></div>
+              <div><dt>Select</dt><dd>Click or tap a phase bar, ruler dot or connection symbol for its dates, details and sources. With a mouse or keyboard, hover over or focus a symbol for a quick summary.</dd></div>
+              <div><dt>Houses</dt><dd>Click or tap a coloured house band to highlight every monarchy that house rules in the “Europe in” year; the others fade but stay usable. A new selection moves the year to the period’s start if needed. Change the year and the highlight follows. Click the band again, click an empty part of the chart, or press Escape to clear it. Selecting a ruler from another house also clears it; a ruler from the selected house keeps it. On a phone, the band leaves the chart visible; open Details to inspect the selected house.</dd></div>
               <div><dt>Year</dt><dd>On the horizontal chart, drag the blue handle on the sticky ruler to change year. An off-center handle follows your pointer until it reaches the middle, then locks there as the chart pans beneath it. At either end, the handle moves toward the edge; drag it back to the middle to lock again. Sideways scrolling and Shift+wheel also change year, centering the playhead where the scroll limits allow. The horizontal scrollbar selects the year at the viewport center. Arrow keys, Home and End also work when focused.</dd></div>
               <div><dt>On a phone</dt><dd>Time runs down the page and each monarchy is a column. Scroll up or down to change year: the horizontal blue line stays centered and the house highlights follow. At the date-range boundaries, the line moves away from the center. Swipe sideways to browse countries without changing year.</dd></div>
               <div><dt>Lines</dt><dd>Dashed: a shared ruler or looser union, sometimes interrupted. Solid: a state union, continuity or reorganization. Dotted: a division, conquest or end. Dash-dot: a restoration.</dd></div>
@@ -277,6 +276,6 @@
   <noscript><p class="error-message">Enable JavaScript to explore the timeline. The methodology, essay and data-quality report are available without it.</p></noscript>
   <script src="assets/timeline-core.js?v=20260905e" defer></script>
   <script src="data/timeline-data.js?v=20260930h" defer></script>
-  <script src="assets/app.js?v=20261014-catchup-selection" defer></script>
+  <script src="assets/app.js?v=20261014-lean-rendering" defer></script>
 </body>
 </html>

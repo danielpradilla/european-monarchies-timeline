@@ -6,11 +6,11 @@ The production site combines a horizontal desktop overview with a transposed mob
 
 “How to read this” in the top navigation (inside Menu on phones) opens an annotated example of Scotland, England and Great Britain from 1590 to 1735. It explains phase bars, house bands, reign marks, connection symbols and annual overlap. Close, Escape or a backdrop click dismisses the guide without changing the selected record or year; the diagram scrolls sideways on narrow screens. The surrounding timeline is not a focus target; keyboard focus indicators remain on its controls.
 
-Click a coloured house band to highlight the monarchy rows (or phone columns) that house rules in the selected year. A new selection moves the year to that period's start if necessary, so its monarchy is highlighted. Other monarchies stay visible and usable. Moving the year updates the highlighted set; clicking the same house again, clicking empty chart space or pressing Escape clears it. Selecting a ruler from another house also clears the highlight; a ruler from the selected house keeps it. Matching uses the dataset's exact house IDs and calendar-year overlap with active institutional phases. House focus is temporary and has no separate URL parameter; house and rule links activate it.
+Click a coloured house band to highlight the monarchy rows (or phone columns) that house rules in the selected year. A new selection moves the year to that period's start if necessary, so its monarchy is highlighted. Other monarchies stay visible and usable. Moving the year updates the highlighted set; clicking the same house again, clicking empty chart space or pressing Escape clears it. Selecting a ruler from another house also clears the highlight; a ruler from the selected house keeps it. On phones, tapping a house band leaves the chart visible and closes any open sheet; use Details to inspect the selected house. Matching uses the dataset's exact house IDs and calendar-year overlap with active institutional phases. House focus is temporary and has no separate URL parameter; house and rule links activate it.
 
 On the horizontal chart, the sticky ruler's blue year handle remains accessible after the top slider scrolls away. An off-center handle follows the pointer until it reaches the middle, then locks there while the chart pans beneath it. Free dragging moves one chart pixel per pointer pixel; centered dragging moves three. At either scroll limit, the handle moves toward the edge; drag it back to the middle to lock again. Sideways scrolling over the chart or ruler also changes the year; Shift+wheel works with a mouse. Wheeling and year keys center the playhead where the scroll limits allow. The horizontal scrollbar selects the year at the viewport center. Arrow keys step one historical year, Page Up/Down ten; Home and End select the dataset's limits. The handle skips year zero. Keyboard focus reveals an off-screen year and underlines its date; high-contrast mode retains an outline. In widescreen mode, ordinary vertical scrolling does not change the year.
 
-In narrow/mobile mode, scrolling up or down through the chart changes the year and updates the selected house's kingdoms. The horizontal year line stays halfway between the sticky country headers and the bottom of the screen, except at the date-range boundaries. Sideways swipes only browse countries. Search, presets, shared links and keyboard focus retain their explicitly selected year during programmatic navigation.
+In narrow/mobile mode, scrolling up or down through the chart changes the year and updates the selected house's kingdoms. The horizontal year line stays halfway between the sticky country headers and the bottom of the screen, except at the date-range boundaries. Sideways swipes only browse countries. Search, presets, shared links and keyboard focus retain their explicitly selected year during programmatic navigation. Switching between layouts preserves the year; height-only resizing retains pending scroll selections.
 
 Essay and Blog use the WordPress post permalink, `/blog/the-braided-crowns-of-europe/`. That address is unavailable while the post remains a draft.
 
@@ -38,6 +38,10 @@ Open <http://localhost:8000>.
 
 You can also open `www/index.html` directly in Safari or another browser. `npm run build` validates the canonical data and generates the file-compatible data bundle in `www/data/`. The deployed site has no runtime dependencies.
 
+Only the active layout is built at startup. The other is prepared when the viewport crosses the 760-pixel breakpoint. Closed snapshot details are rendered when opened.
+
+Generated files are replaced individually through same-directory temporary files and atomic renames. A failed write preserves that file's previous version; the three-file build is not a transaction.
+
 ## Test
 
 ```bash
@@ -53,6 +57,8 @@ npm run serve:tests      # Then open http://127.0.0.1:8001/tests/browser.html
 ```
 
 The browser harness checks the real explorer, linked details, search navigation without filtering, URL restoration, cached extracts and layouts at 320, 760 and 1200 pixels. It is a manual browser check; CI runs the Node suite. It also covers explicit-year links, mobile menu access, detail focus return, region collapse, house highlighting across year boundaries and clearing actions, ruler keyboard controls and BCE/CE boundaries, center-lock and return from both endpoints, off-screen year focus, and reading-guide dismissal without losing the current selection. Keyboard focus requires a foreground browser window and is explicitly skipped in inactive/background windows.
+
+Resize regressions cover breakpoint changes and pending mobile scroll commits after height changes. Detail regressions cover record swaps, opening the latest snapshot, mobile house-band actions and connection selection.
 
 **Passing tests establish structural consistency, not historical accuracy.** The [data-quality page](www/quality.html) lists missing direct citations and known modelling limitations. All 700 dated claims have direct citations; regional specialist review remains an ongoing editorial responsibility.
 

@@ -255,18 +255,6 @@ h3 {
 
 
 
-select {
-  width: 100%;
-  min-height: 42px;
-  padding: 0 36px 0 11px;
-  border: 1px solid var(--line);
-  border-radius: 0;
-  background: var(--page);
-  color: var(--ink);
-  font-weight: 400;
-  text-transform: none;
-  letter-spacing: normal;
-}
 
 .story-jumps {
   margin: 4px 0 16px;
@@ -555,14 +543,6 @@ select {
   min-width: 100%;
 }
 
-.axis-layer {
-  position: absolute;
-  z-index: 5;
-  inset: 0 0 auto;
-  height: var(--axis-height);
-  border-bottom: 1px solid var(--line-strong);
-  background: color-mix(in srgb, var(--page) 92%, transparent);
-}
 
 .axis-tick {
   position: absolute;

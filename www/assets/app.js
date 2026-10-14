@@ -58,7 +58,6 @@ const elements = {
   labelColumn: document.getElementById('label-column'),
   plotScroller: document.getElementById('plot-scroller'),
   plotCanvas: document.getElementById('plot-canvas'),
-  axisLayer: document.getElementById('axis-layer'),
   stickyAxisLayer: document.getElementById('sticky-axis-layer'),
   rulerYear: document.getElementById('ruler-year'),
   laneLayer: document.getElementById('lane-layer'),
@@ -127,15 +126,25 @@ let plotScrollLeft = 0;
 let wheelX = null;
 let timeScrollTimer;
 let columnBrowsing = false;
+let rulerDragging = false;
+let desktopDirty = true;
+let columnsBuilt = false;
+let snapshotCache = null;
+let snapshotCacheYear;
+let paintedHouse;
+let paintedMatches;
+let paintedRelationship;
+let paintedPolity;
+let snapshotDetailPending = false;
 
-function stopColumnBrowsing() {
+function stopColumnBrowsing(preserveCommit = false) {
   columnBrowsing = false;
-  clearTimeout(timeScrollTimer);
+  if (!preserveCommit) clearTimeout(timeScrollTimer);
 }
 
-function panPlotTo(left, behavior = 'instant') {
+function panPlotTo(left, behavior = 'instant', preserveCommit = false) {
   const scroller = elements.plotScroller;
-  clearTimeout(timeScrollTimer);
+  if (!preserveCommit) clearTimeout(timeScrollTimer);
   wheelX = null;
   // Match native pixel rounding so the penultimate smooth-scroll event cannot release ownership.
   plotPanTarget = Math.round(Math.max(0, Math.min(scroller.scrollWidth - scroller.clientWidth, left)));
@@ -246,19 +255,24 @@ function bindSearch() {
 
 function toggleRegion(region) {
   if (!state.collapsedRegions.delete(region)) state.collapsedRegions.add(region);
+  desktopDirty = true;
   renderTimeline();
   elements.labelColumn.querySelector(`[data-region="${CSS.escape(region)}"]`)?.focus();
 }
 
 function jumpToResult(result, openDetails = false, requestedYear = null) {
   stopColumnBrowsing();
+  const shouldOpenDetails = openDetails || elements.detailPanel.open;
   if (!openRecord(result.type, result.id, false)) return false;
   const collection = { reign: 'reigns', rule: 'rules', phase: 'phases', event: 'events', relationship: 'relationships' }[result.type];
   const record = result.type === 'house' ? rulesForHouse(result.id)[0] : dataIndex.ids[collection]?.get(result.id);
   const polityId = result.type === 'polity' ? result.id : result.type === 'region'
     ? state.polities.find(p => p.region === result.id)?.id : record?.polity_id || record?.from?.[0] || record?.to?.[0] || record?.polity_ids?.[0];
   if (!polityId) return false;
-  if (state.collapsedRegions.delete(byId(state.data.polities, polityId)?.region)) renderTimeline();
+  if (state.collapsedRegions.delete(byId(state.data.polities, polityId)?.region)) {
+    desktopDirty = true;
+    renderTimeline();
+  }
   const phases = recordsFor(polityId, 'phases');
   const year = requestedYear ?? record?.start ?? record?.year ?? (result.type === 'region' || phases.some(p => TimelineCore.activeDuring(p, state.snapshotYear, state.data.meta)) ? state.snapshotYear : phases[0].start);
   state.snapshotYear = year;
@@ -286,7 +300,10 @@ function jumpToResult(result, openDetails = false, requestedYear = null) {
   elements.search.value = result.label || (result.type === 'region' ? result.id : elements.detailTitle.textContent);
   closeSearch();
   syncUrl();
-  if (openDetails) setDetailOpen(true);
+  if (shouldOpenDetails) {
+    setDetailOpen(true);
+    detailOpener = target;
+  }
   return true;
 }
 
@@ -366,20 +383,21 @@ function renderAxisInto(container) {
 }
 
 function syncStickyAxis() {
-  elements.stickyAxisLayer.style.transform = `translateX(${-elements.plotScroller.scrollLeft}px)`;
-  const left = xForYear(state.snapshotYear) - elements.plotScroller.scrollLeft;
+  if (mobileView()) return;
+  const scrollLeft = elements.plotScroller.scrollLeft;
+  const width = elements.rulerYear.parentElement.clientWidth;
+  const left = xForYear(state.snapshotYear) - scrollLeft;
+  elements.stickyAxisLayer.style.transform = `translateX(${-scrollLeft}px)`;
   elements.rulerYear.style.left = `${left}px`;
-  elements.rulerYear.dataset.edge = left <= 44 ? 'start'
-    : left >= elements.rulerYear.parentElement.clientWidth - 44 ? 'end' : '';
+  elements.rulerYear.dataset.edge = left <= 44 ? 'start' : left >= width - 44 ? 'end' : '';
 }
 
 function renderAxis() {
-  renderAxisInto(elements.axisLayer);
   renderAxisInto(elements.stickyAxisLayer);
-  syncStickyAxis();
 }
 
 function renderLabelColumn() {
+  paintedPolity = paintedMatches = undefined;
   elements.labelColumn.replaceChildren();
   elements.labelColumn.style.height = `${AXIS_HEIGHT + state.plotHeight}px`;
   for (const item of state.layout) {
@@ -425,12 +443,13 @@ function elementButton(className, ariaLabel, onClick) {
   button.setAttribute('aria-label', ariaLabel);
   button.addEventListener('click', () => {
     onClick();
-    setDetailOpen(true);
+    setDetailOpen(!(mobileView() && button.classList.contains('vertical-rule')));
   });
   return button;
 }
 
 function renderLaneLayer() {
+  paintedHouse = paintedMatches = undefined;
   elements.laneLayer.replaceChildren();
   elements.laneLayer.style.width = `${state.plotWidth}px`;
   elements.laneLayer.style.height = `${state.plotHeight}px`;
@@ -548,9 +567,10 @@ function bindRelationshipPreview(target, relationship) {
   target.addEventListener('focus', event => {
     target.scrollIntoView({ behavior: 'instant', block: 'nearest', inline: 'nearest' });
     plotScrollLeft = elements.plotScroller.scrollLeft;
-    requestAnimationFrame(() => {
+    // Instant focus reveal can dispatch its scroll event after the first frame.
+    requestAnimationFrame(() => requestAnimationFrame(() => {
       if (document.activeElement === target) show(event);
-    });
+    }));
   });
   for (const event of ['pointerleave', 'blur']) target.addEventListener(event, () => {
     clearTimeout(relationshipPreviewTimer);
@@ -561,15 +581,23 @@ function bindRelationshipPreview(target, relationship) {
 
 function updateRelationshipSelection() {
   const id = state.selected?.type === 'relationship' ? state.selected.id : null;
-  for (const group of elements.relationshipLayer.children) {
-    group.classList.toggle('is-selected', group.dataset.relationshipId === id);
+  if (paintedRelationship === id) return;
+  paintedRelationship = id;
+  for (const layer of [elements.relationshipLayer, elements.verticalChart.querySelector('.column-links')]) {
+    if (!layer) continue;
+    let selected;
+    for (const group of [...layer.children]) {
+      const matching = group.dataset.relationshipId === id;
+      group.classList.toggle('is-selected', matching);
+      if (matching) selected = group;
+    }
+    layer.classList.toggle('has-selection', Boolean(selected));
+    // Paint the selected branches last so crossing lines cannot cover them.
+    if (selected) layer.append(selected);
   }
-  const selected = elements.relationshipLayer.querySelector('.is-selected');
-  elements.relationshipLayer.classList.toggle('has-selection', Boolean(selected));
-  // Paint the selected branches last so crossing lines cannot cover them.
-  if (selected) elements.relationshipLayer.append(selected);
-  for (const button of elements.relationshipControlsLayer.children) {
-    button.setAttribute('aria-pressed', String(button.dataset.relationshipId === id));
+  for (const button of elements.explorer.querySelectorAll('button[data-relationship-id]')) {
+    const pressed = String(button.dataset.relationshipId === id);
+    if (button.getAttribute('aria-pressed') !== pressed) button.setAttribute('aria-pressed', pressed);
   }
 }
 
@@ -588,6 +616,7 @@ function relationshipButton(relationship, endpointIds, polityId) {
 
 function renderRelationships() {
   hideRelationshipPreview();
+  paintedRelationship = undefined;
   elements.relationshipLayer.replaceChildren();
   elements.relationshipControlsLayer.replaceChildren();
   elements.relationshipLayer.setAttribute('width', String(state.plotWidth));
@@ -639,14 +668,23 @@ function renderRelationships() {
 function renderTimeline() {
   state.polities = orderedPolities();
   state.plotWidth = Math.round((TimelineCore.yearPosition(chartEnd()) - TimelineCore.yearPosition(chartStart())) * PIXELS_PER_YEAR);
-  state.layout = buildLayout(state.polities);
-  elements.plotCanvas.style.width = `${state.plotWidth}px`;
-  elements.plotCanvas.style.height = `${AXIS_HEIGHT + state.plotHeight}px`;
-  renderAxis();
-  renderLabelColumn();
-  renderLaneLayer();
-  renderRelationships();
-  renderColumns();
+  if (mobileView()) {
+    if (!columnsBuilt) {
+      renderColumns();
+      columnsBuilt = true;
+    }
+  } else if (desktopDirty) {
+    state.layout = buildLayout(state.polities);
+    elements.plotCanvas.style.width = `${state.plotWidth}px`;
+    elements.plotCanvas.style.height = `${AXIS_HEIGHT + state.plotHeight}px`;
+    renderAxis();
+    renderLabelColumn();
+    renderLaneLayer();
+    renderRelationships();
+    desktopDirty = false;
+  }
+  paintedHouse = paintedMatches = paintedPolity = undefined;
+  updateSelection();
   updateCrosshair();
 }
 
@@ -663,8 +701,8 @@ function syncColumnHeader() {
   elements.columnHeaderTrack.style.transform = `translateX(${-elements.verticalScroller.scrollLeft}px)`;
 }
 
-function scrollColumnsTo(year, polityId, behavior = scrollBehavior()) {
-  stopColumnBrowsing();
+function scrollColumnsTo(year, polityId, behavior = scrollBehavior(), preserveCommit = false) {
+  stopColumnBrowsing(preserveCommit);
   if (polityId) elements.verticalScroller.scrollTo({ left: Math.max(0, columnX(polityId) + COLUMN_WIDTH / 2 - elements.verticalScroller.clientWidth / 2), behavior });
   const center = (64 + elements.columnHeader.offsetHeight + window.innerHeight) / 2;
   const top = elements.verticalChart.getBoundingClientRect().top + window.scrollY + columnY(year);
@@ -673,6 +711,8 @@ function scrollColumnsTo(year, polityId, behavior = scrollBehavior()) {
 
 // Mobile view: the desktop chart transposed, with time running down and one column per polity.
 function renderColumns() {
+  paintedHouse = paintedMatches = paintedPolity = undefined;
+  paintedRelationship = undefined;
   const chart = elements.verticalChart;
   const header = elements.columnHeaderTrack;
   chart.replaceChildren();
@@ -835,9 +875,16 @@ function renderColumns() {
     chart.append(button);
   }
   syncColumnHeader();
+  updateRelationshipSelection();
 }
 
-function activeAtYear(year) { return TimelineCore.snapshot(state.data, dataIndex, state.polities, year); }
+function activeAtYear(year) {
+  if (snapshotCacheYear !== year) {
+    snapshotCache = TimelineCore.snapshot(state.data, dataIndex, state.polities, year);
+    snapshotCacheYear = year;
+  }
+  return snapshotCache;
+}
 
 function updateHouseFocus() {
   const house = byId(state.data.houses, state.houseFocusId);
@@ -850,14 +897,28 @@ function updateHouseFocus() {
       }
     }
   }
-  elements.explorer.classList.toggle('house-focus-active', Boolean(house));
-  for (const node of elements.explorer.querySelectorAll('.label-row, .plot-row, .column-label, .column-lane, .vertical-phase, .vertical-rule, .vertical-reign, .vertical-reign-duration')) {
-    const matching = matches.has(node.dataset.polityId);
-    node.classList.toggle('house-focus-match', Boolean(house) && matching);
-    node.classList.toggle('house-focus-muted', Boolean(house) && !matching);
+  const roots = mobileView() ? [elements.columnHeaderTrack, elements.verticalChart] : [elements.labelColumn, elements.laneLayer];
+  const matchKey = `${mobileView()}:${Boolean(house)}:${[...matches].sort().join(',')}`;
+  if (paintedMatches !== matchKey) {
+    paintedMatches = matchKey;
+    elements.explorer.classList.toggle('house-focus-active', Boolean(house));
+    for (const root of roots) {
+      for (const node of root.querySelectorAll('.label-row, .plot-row, .column-label, .column-lane, .vertical-phase, .vertical-rule, .vertical-reign, .vertical-reign-duration')) {
+        const matching = matches.has(node.dataset.polityId);
+        node.classList.toggle('house-focus-match', Boolean(house) && matching);
+        node.classList.toggle('house-focus-muted', Boolean(house) && !matching);
+      }
+    }
   }
-  for (const button of elements.explorer.querySelectorAll('.rule-segment, .vertical-rule')) {
-    button.setAttribute('aria-pressed', String(Boolean(house) && button.dataset.houseId === house.id));
+  const houseKey = `${mobileView()}:${state.houseFocusId}`;
+  if (paintedHouse !== houseKey) {
+    paintedHouse = houseKey;
+    for (const root of roots) {
+      for (const button of root.querySelectorAll('.rule-segment, .vertical-rule')) {
+        const pressed = String(Boolean(house) && button.dataset.houseId === house.id);
+        if (button.getAttribute('aria-pressed') !== pressed) button.setAttribute('aria-pressed', pressed);
+      }
+    }
   }
   elements.houseFocusStatus.hidden = !house;
   elements.houseFocusStatus.textContent = house
@@ -872,30 +933,35 @@ function setHouseFocus(houseId) {
 }
 
 function toggleHouseFocus(ruleId) {
-  if (mobileView()) stopColumnBrowsing();
+  const top = mobileView() ? window.scrollY : null;
+  if (top !== null) stopColumnBrowsing();
   const rule = byId(state.data.rules, ruleId);
   const clearing = state.houseFocusId === rule.house_id;
   if (!clearing && !TimelineCore.activeDuring(rule, state.snapshotYear, state.data.meta)) updateSnapshotYear(rule.start, false);
   setHouseFocus(clearing ? null : rule.house_id);
   showRuleDetail(ruleId, false);
+  // Keep scroll anchoring of the newly visible house status from moving the chart viewport.
+  if (top !== null) window.scrollTo({ top, behavior: 'instant' });
 }
 
 function updateCrosshair() {
-  const x = xForYear(state.snapshotYear);
-  elements.crosshair.style.left = `${x}px`;
-  elements.crosshair.style.height = `${AXIS_HEIGHT + state.plotHeight}px`;
-  for (const item of elements.verticalChart.querySelectorAll('.column-crosshair, .column-crosshair-label')) item.style.top = `${columnY(state.snapshotYear)}px`;
-  const columnLabel = elements.verticalChart.querySelector('.column-crosshair-label');
-  if (columnLabel) columnLabel.textContent = formatYear(state.snapshotYear);
+  if (mobileView()) {
+    for (const item of elements.verticalChart.querySelectorAll('.column-crosshair, .column-crosshair-label')) item.style.top = `${columnY(state.snapshotYear)}px`;
+    const columnLabel = elements.verticalChart.querySelector('.column-crosshair-label');
+    if (columnLabel) columnLabel.textContent = formatYear(state.snapshotYear);
+  } else {
+    syncStickyAxis();
+    elements.crosshair.style.left = `${xForYear(state.snapshotYear)}px`;
+    elements.crosshair.style.height = `${AXIS_HEIGHT + state.plotHeight}px`;
+    elements.rulerYear.textContent = formatYear(state.snapshotYear);
+    elements.rulerYear.setAttribute('aria-valuemin', String(chartStart()));
+    elements.rulerYear.setAttribute('aria-valuemax', String(chartEnd()));
+    elements.rulerYear.setAttribute('aria-valuenow', String(state.snapshotYear));
+    elements.rulerYear.setAttribute('aria-valuetext', formatYear(state.snapshotYear));
+  }
   elements.snapshotYearOutput.textContent = formatYear(state.snapshotYear);
   elements.snapshotYear.value = String(state.snapshotYear);
   elements.snapshotYear.setAttribute('aria-valuetext', formatYear(state.snapshotYear));
-  elements.rulerYear.textContent = formatYear(state.snapshotYear);
-  elements.rulerYear.setAttribute('aria-valuemin', String(chartStart()));
-  elements.rulerYear.setAttribute('aria-valuemax', String(chartEnd()));
-  elements.rulerYear.setAttribute('aria-valuenow', String(state.snapshotYear));
-  elements.rulerYear.setAttribute('aria-valuetext', formatYear(state.snapshotYear));
-  syncStickyAxis();
 
   const { activeIds } = activeAtYear(state.snapshotYear);
   elements.snapshotSummary.textContent = `${activeIds.size} monarchies shown for this year.`;
@@ -915,7 +981,7 @@ function updateSnapshotYear(year, writeUrl = true) {
 function selectSnapshotYear(year, behavior = scrollBehavior(), writeUrl = true) {
   if (mobileView()) stopColumnBrowsing();
   updateSnapshotYear(year, writeUrl);
-  panPlotTo(xForYear(state.snapshotYear) - elements.plotScroller.clientWidth / 2, behavior);
+  if (!mobileView()) panPlotTo(xForYear(state.snapshotYear) - elements.plotScroller.clientWidth / 2, behavior);
   // Dragging the slider must not scroll the page out from under the thumb.
   if (mobileView() && behavior !== 'instant') scrollColumnsTo(state.snapshotYear, null, behavior);
 }
@@ -955,12 +1021,14 @@ function bindRulerYear() {
   const finish = event => {
     if (event.pointerId !== drag?.pointerId) return;
     drag = null;
+    rulerDragging = false;
     if (elements.rulerYear.hasPointerCapture(event.pointerId)) elements.rulerYear.releasePointerCapture(event.pointerId);
     syncUrl();
   };
   elements.rulerYear.addEventListener('pointerdown', event => {
     if (!event.isPrimary || event.button !== 0 || drag) return;
     event.preventDefault();
+    rulerDragging = true;
     elements.rulerYear.setPointerCapture(event.pointerId);
     const scroller = elements.plotScroller;
     panPlotTo(scroller.scrollLeft);
@@ -997,12 +1065,42 @@ function bindTimeScrolling() {
   const scroller = elements.plotScroller;
   let touchBrowsing = false;
   let focusReveal = 0;
-  let scrollWidth = scroller.clientWidth;
+  let scrollWidth = mobileView() ? 0 : scroller.clientWidth;
+  let viewportWidth = window.innerWidth;
+  let viewportHeight = window.innerHeight;
+  let columnResizeTop = null;
+  let wasMobile = mobileView();
   window.addEventListener('resize', () => {
-    scrollWidth = scroller.clientWidth;
-    plotScrollLeft = scroller.scrollLeft;
-    if (plotPanTarget !== null) panPlotTo(plotPanTarget);
-    if (mobileView()) stopColumnBrowsing();
+    const mobile = mobileView();
+    const widthChanged = viewportWidth !== window.innerWidth;
+    const heightChanged = viewportHeight !== window.innerHeight;
+    const layoutChanged = mobile !== wasMobile;
+    viewportWidth = window.innerWidth;
+    if (!mobile) {
+      scrollWidth = scroller.clientWidth;
+      plotScrollLeft = scroller.scrollLeft;
+    }
+    if (layoutChanged) {
+      wasMobile = mobile;
+      renderTimeline();
+    }
+    if ((widthChanged || layoutChanged) && !rulerDragging) {
+      stopColumnBrowsing(true);
+      wheelX = null;
+      if (mobile) scrollColumnsTo(state.snapshotYear, null, 'instant', true);
+      else panPlotTo(xForYear(state.snapshotYear) - scroller.clientWidth / 2, 'instant', true);
+    } else if (mobile && heightChanged && columnBrowsing && !rulerDragging) {
+      const chart = elements.verticalChart.getBoundingClientRect();
+      const top = Math.max(64, elements.columnHeader.getBoundingClientRect().bottom);
+      const headerHeight = elements.columnHeader.offsetHeight;
+      const previousAnchor = (64 + headerHeight + viewportHeight) / 2;
+      const anchor = (64 + headerHeight + window.innerHeight) / 2;
+      if (chart.top <= previousAnchor && chart.bottom >= previousAnchor && top < window.innerHeight) {
+        window.scrollTo({ top: Math.max(0, window.scrollY + chart.top + columnY(state.snapshotYear) - anchor), behavior: 'instant' });
+        columnResizeTop = window.scrollY;
+      }
+    } else if (!mobile) syncStickyAxis();
+    viewportHeight = window.innerHeight;
   });
   const commit = () => {
     clearTimeout(timeScrollTimer);
@@ -1057,6 +1155,7 @@ function bindTimeScrolling() {
   // Only vertical user input owns mobile time; app pans and focus reveals retain their explicit year.
   const unrelated = target => target instanceof Element && target.closest('input, textarea, select, .detail-panel, .reading-guide, .search-panel');
   const browseColumns = () => {
+    columnResizeTop = null;
     if (columnBrowsing) return;
     window.scrollTo({ top: window.scrollY, behavior: 'instant' });
     columnBrowsing = true;
@@ -1093,6 +1192,11 @@ function bindTimeScrolling() {
   });
   window.addEventListener('scroll', () => {
     if (!mobileView() || !columnBrowsing) return;
+    if (columnResizeTop !== null) {
+      const resized = window.scrollY === columnResizeTop;
+      columnResizeTop = null;
+      if (resized) return;
+    }
     const chart = elements.verticalChart.getBoundingClientRect();
     const top = Math.max(64, elements.columnHeader.getBoundingClientRect().bottom);
     if (chart.bottom <= top || chart.top >= window.innerHeight || top >= window.innerHeight) return;
@@ -1134,7 +1238,7 @@ function openRecord(type, id, openDetails = true) {
   const collection = { polity:'polities', phase:'phases', rule:'rules', reign:'reigns', house:'houses', relationship:'relationships', event:'events' }[type];
   if (!show || !(type === 'region' ? state.polities.some(p => p.region === id) : dataIndex.ids[collection]?.has(id))) return false;
   show(id);
-  setDetailOpen(openDetails);
+  if (openDetails) setDetailOpen(true);
   return true;
 }
 function appendItems(container, items) {
@@ -1153,9 +1257,22 @@ function appendItems(container, items) {
     container.append(li);
   }
 }
+function updateSelection() {
+  updateRelationshipSelection();
+  const id = state.selected?.type === 'polity' ? state.selected.id : null;
+  if (paintedPolity === id) return;
+  paintedPolity = id;
+  for (const root of [elements.labelColumn, elements.columnHeaderTrack]) {
+    for (const button of root.querySelectorAll('button[data-polity-id]')) {
+      const pressed = String(button.dataset.polityId === id);
+      if (button.getAttribute('aria-pressed') !== pressed) button.setAttribute('aria-pressed', pressed);
+    }
+  }
+}
 function setDetail({ type, title, dates = '', copy = '', listTitle = '', list = [], sources = [], links = [], groups = [], record = {}, writeUrl = true }) {
   hideRelationshipPreview();
-  updateRelationshipSelection();
+  snapshotDetailPending = false;
+  updateSelection();
   elements.detailType.textContent = type;
   elements.detailTitle.textContent = title;
   elements.detailToggleTitle.textContent = title;
@@ -1190,8 +1307,7 @@ function setDetail({ type, title, dates = '', copy = '', listTitle = '', list = 
   }
   elements.detailSources.replaceChildren();
   for (const link of [...sources.map(source => ({ label: source.title, url: source.url })), ...links]) if (link?.url) appendDetailLink(link.label, link.url);
-  for (const button of elements.labelColumn.querySelectorAll('button[data-polity-id]')) button.setAttribute('aria-pressed', String(state.selected.type === 'polity' && state.selected.id === button.dataset.polityId));
-  elements.detailPanel.scrollTop = 0;
+  if (elements.detailPanel.open) elements.detailPanel.scrollTop = 0;
   if (writeUrl) syncUrl();
 }
 function appendDetailLink(label, url) {
@@ -1201,18 +1317,27 @@ function appendDetailLink(label, url) {
   elements.detailSources.append(anchor);
 }
 let detailOpener = null;
+let detailFocusFrame;
 function setDetailOpen(isOpen, restoreFocus = false) {
+  cancelAnimationFrame(detailFocusFrame);
   const wasOpen = elements.detailPanel.open;
+  if (isOpen && snapshotDetailPending) showSnapshotDetail(false, true);
   if (isOpen && !wasOpen) detailOpener = document.activeElement;
   elements.detailPanel.classList.toggle('is-open', isOpen);
   elements.detailPanel.setAttribute('aria-hidden', String(!isOpen));
   elements.detailPanel.inert = !isOpen;
   elements.detailToggle.setAttribute('aria-expanded', String(isOpen));
   elements.detailToggle.hidden = isOpen;
-  if (isOpen && !elements.detailPanel.open) elements.detailPanel.show();
-  if (isOpen) requestAnimationFrame(() => {
-    if (elements.detailPanel.open) elements.detailTitle.focus({ preventScroll: true });
-  });
+  if (isOpen && !wasOpen) {
+    elements.detailPanel.show();
+    elements.detailPanel.scrollTop = 0;
+  }
+  if (isOpen) {
+    const focusFrom = document.activeElement;
+    detailFocusFrame = requestAnimationFrame(() => {
+      if (elements.detailPanel.open && document.activeElement === focusFrom) elements.detailTitle.focus({ preventScroll: true });
+    });
+  }
   if (!isOpen && wasOpen) {
     elements.detailPanel.close();
     if (restoreFocus) {
@@ -1227,12 +1352,20 @@ function reignLink(reign) {
 function connectionLinks(polityId) {
   return recordsFor(polityId, 'relationships').map(r => detailLink('relationship', r.id, `${r.label} · ${formatRange(r.start, r.end ?? r.start)}`));
 }
-function showSnapshotDetail(writeUrl = true) {
+function showSnapshotDetail(writeUrl = true, prepare = false) {
   state.selected = { type: 'snapshot', id: String(state.snapshotYear) };
   const preset = state.data.presets.find(item => item.year === state.snapshotYear);
+  const title = preset?.title || `Europe in ${formatYear(state.snapshotYear)}`;
+  elements.detailToggleTitle.textContent = title;
+  updateSelection();
+  if (!elements.detailPanel.open && !prepare) {
+    snapshotDetailPending = true;
+    if (writeUrl) syncUrl();
+    return;
+  }
   const { activeIds, activeReigns } = activeAtYear(state.snapshotYear);
   const events = state.data.events.filter(e => e.year === state.snapshotYear);
-  setDetail({ writeUrl, type: 'Year', title: preset?.title || `Europe in ${formatYear(state.snapshotYear)}`,
+  setDetail({ writeUrl, type: 'Year', title,
     dates: `${activeIds.size} monarchies during ${formatYear(state.snapshotYear)}`,
     copy: preset?.description || 'Selected reigns active during this year.',
     listTitle: `Reigns (${activeReigns.length})`, list: activeReigns.map(reignLink),
@@ -1273,7 +1406,6 @@ function showRuleDetail(ruleId, focusHouse = true) {
   addWikipediaSummary(house);
 }
 function showHouseDetail(houseId) {
-  if(houseId==='all'){setHouseFocus(null);showSnapshotDetail();return;}
   const house=byId(state.data.houses,houseId),rules=rulesForHouse(houseId);
   setHouseFocus(houseId);
   state.selected={type:'house',id:houseId};
@@ -1297,7 +1429,7 @@ function showRelationshipDetail(id) {
   const r=byId(state.data.relationships,id);state.selected={type:'relationship',id};
   const ids=[...new Set([...r.from,...r.to])];
   setDetail({type:TimelineCore.relationshipTypes[r.type][1],title:r.label,dates:formatRange(r.start,r.end??r.start),
-    copy:r.description,record:r,
+    copy:[r.description, r.note].filter(Boolean).join('\n\n'),record:r,
     listTitle:'Connected monarchies',list:ids.map(id=>detailLink('polity',id,byId(state.data.polities,id).name))});
 }
 function showEventDetail(id) {
@@ -1320,7 +1452,6 @@ function bindControls() {
     if (event.target !== elements.relationshipTooltip) hideRelationshipPreview();
   }, { capture: true, passive: true });
   window.addEventListener('resize', hideRelationshipPreview);
-  window.addEventListener('resize', syncStickyAxis);
   bindSearch();
   bindRulerYear();
   bindTimeScrolling();
@@ -1347,6 +1478,9 @@ function bindControls() {
     if (!elements.detailPanel.classList.contains('is-open')) return;
     if (event.target.closest('#reading-guide, .reading-guide-open')) return;
     if (elements.detailPanel.contains(event.target) || elements.detailToggle.contains(event.target)) return;
+    if (event.target.closest('button[data-polity-id], button[data-phase-id], button[data-rule-id], button[data-reign-id], [data-relationship-id], #search-results [role="option"], .preset-button')) {
+      if (!(mobileView() && event.target.closest('.vertical-rule'))) return;
+    }
     setDetailOpen(false);
   });
   document.addEventListener('click', (event) => {
@@ -1354,7 +1488,7 @@ function bindControls() {
     for (const match of document.querySelectorAll('.search-match')) {
       if (!match.contains(event.target)) match.classList.remove('search-match');
     }
-    if (state.selected?.type !== 'relationship' || event.target.closest('[data-relationship-id]')) return;
+    if (state.selected?.type !== 'relationship' || event.target.closest('button[data-polity-id], button[data-phase-id], button[data-rule-id], button[data-reign-id], [data-relationship-id], #search-results [role="option"], .preset-button')) return;
     setDetailOpen(false);
     showSnapshotDetail();
   }, { capture: true });
@@ -1375,7 +1509,6 @@ function bindControls() {
 function init() {
   try {
     if (!state.data) throw new Error('Timeline data bundle is missing.');
-    state.plotWidth = Math.round((chartEnd() - chartStart()) * PIXELS_PER_YEAR);
     elements.snapshotYear.min = String(chartStart());
     elements.snapshotYear.max = String(chartEnd());
     const searchParams = new URLSearchParams(window.location.search);
@@ -1388,8 +1521,7 @@ function init() {
     bindControls();
     renderTimeline();
     showSnapshotDetail();
-    const initialTarget = Math.max(0, xForYear(state.snapshotYear) - elements.plotScroller.clientWidth / 2);
-    panPlotTo(initialTarget);
+    if (!mobileView()) panPlotTo(Math.max(0, xForYear(state.snapshotYear) - elements.plotScroller.clientWidth / 2));
     if (requestedSelection?.length === 2) jumpToResult({ type: requestedSelection[0], id: requestedSelection[1] }, true, requestedYear);
     else if (searchParams.get('q')) renderSearch();
     else if (searchParams.get('region') && searchParams.get('region') !== 'all') jumpToResult({ type: 'region', id: searchParams.get('region') }, false, requestedYear);
