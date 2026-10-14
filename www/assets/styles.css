@@ -382,13 +382,87 @@ select {
 }
 
 .sticky-ruler-window {
-  overflow: hidden;
+  position: relative;
+  overflow: clip; /* Focus must not scroll this copy independently of the chart. */
 }
 
 .sticky-axis-layer {
   position: relative;
   height: var(--axis-height);
   will-change: transform;
+}
+
+/* Year handle: 40px hit box, 26px accent flag, 2px stem continuing the chart's year line. */
+.ruler-year {
+  --ruler-year-fill: var(--accent);
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  height: 40px;
+  padding: 0 20px;
+  transform: translateX(calc(-50% + 1px));
+  border: 1px solid transparent; /* shows as a frame in forced-colors mode */
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 6 10'%3E%3Cpath d='M5 1 1 5l4 4' fill='none' stroke='%23fff' stroke-opacity='.75' stroke-width='1.5'/%3E%3C/svg%3E") left 8px center / 6px 10px no-repeat,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 6 10'%3E%3Cpath d='M1 1 5 5 1 9' fill='none' stroke='%23fff' stroke-opacity='.75' stroke-width='1.5'/%3E%3C/svg%3E") right 8px center / 6px 10px no-repeat,
+    linear-gradient(var(--ruler-year-fill), var(--ruler-year-fill)) center / 100% 26px no-repeat;
+  color: #fff;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 38px;
+  white-space: nowrap;
+  cursor: ew-resize;
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+}
+
+.ruler-year::before {
+  content: "";
+  position: absolute;
+  top: 32px;
+  left: calc(50% - 1px);
+  width: 2px;
+  height: calc(var(--axis-height) - 32px);
+  background: var(--ruler-year-fill);
+}
+
+.ruler-year[data-edge="start"] {
+  transform: none;
+}
+
+.ruler-year[data-edge="start"]::before {
+  left: -1px;
+}
+
+.ruler-year[data-edge="end"] {
+  transform: translateX(calc(-100% + 2px));
+}
+
+.ruler-year[data-edge="end"]::before {
+  left: auto;
+  right: -1px;
+}
+
+.ruler-year:hover {
+  --ruler-year-fill: color-mix(in srgb, var(--accent) 82%, var(--ink));
+}
+
+.ruler-year:active {
+  cursor: grabbing;
+}
+
+/* Focus marks the year inside the flag; the transparent outline only paints in forced-colors mode. */
+.ruler-year:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: -2px;
+  text-decoration: underline 2px;
+  text-underline-offset: 3px;
+}
+
+/* Before data loads (or on load error) JS has set no year. */
+.ruler-year:empty {
+  visibility: hidden;
 }
 
 .timeline-grid {
@@ -744,21 +818,6 @@ select {
   width: 1px;
   border-left: 2px solid var(--accent);
   pointer-events: none;
-}
-
-.crosshair span {
-  position: sticky;
-  top: 7px;
-  display: block;
-  width: max-content;
-  transform: translateX(-50%);
-  padding: 3px 7px;
-  border-radius: 0;
-  background: var(--accent);
-  color: #fff;
-  font-size: 0.68rem;
-  font-weight: 400;
-  font-variant-numeric: tabular-nums;
 }
 
 .legend {
@@ -1475,6 +1534,27 @@ input[type="search"] { width: 100%; min-width: 0; min-height: 42px; border: 1px 
 .label-region::before { content: ""; flex: none; width: 5px; height: 5px; margin: 0 3px; border-right: 1.5px solid; border-bottom: 1.5px solid; transform: translateY(-2px) rotate(45deg); transition: transform 120ms ease; }
 .label-region[aria-expanded="false"]::before { transform: rotate(-45deg); }
 .label-region:hover { color: var(--ink); background: var(--surface-soft); }
+
+/* Mute chart marks without fading control opacity, so keyboard outlines remain visible. */
+.house-focus-status { margin: -4px 0 12px; padding: 6px 10px; border-left: 3px solid var(--accent); background: color-mix(in srgb, var(--accent-soft) 55%, var(--page)); color: var(--ink); font-size: 0.82rem; line-height: 1.45; overflow-wrap: anywhere; }
+.house-focus-active :is(.plot-row, .column-lane, .column-label).house-focus-match,
+.house-focus-active .label-row.house-focus-match { background: color-mix(in srgb, var(--accent-soft) 60%, transparent); }
+.house-focus-active .label-row.house-focus-match { box-shadow: inset 3px 0 0 var(--accent); }
+/* The label is rotated 180deg, so this top edge renders at the bottom, against the chart. */
+.house-focus-active .column-label.house-focus-match { box-shadow: inset 0 3px 0 var(--accent); }
+.house-focus-active .label-row.house-focus-muted:not(:hover, :focus-within) :is(button, small),
+.house-focus-active .column-label.house-focus-muted:not(:hover, :focus-visible),
+.house-focus-active .plot-row.house-focus-muted:not(:hover, :focus-within) .reign-label { color: var(--secondary); }
+.house-focus-active .plot-row.house-focus-muted:not(:hover, :focus-within) .phase-segment,
+.house-focus-active .vertical-phase.house-focus-muted:not(:hover, :focus-visible) { border-color: var(--line); background: color-mix(in srgb, var(--surface-soft) 75%, var(--page)); }
+.house-focus-active .plot-row.house-focus-muted:not(:hover, :focus-within) .rule-segment,
+.house-focus-active .vertical-rule.house-focus-muted:not(:hover, :focus-visible) { border-color: color-mix(in srgb, var(--house-color) 45%, var(--page)); background: color-mix(in srgb, var(--house-color) 14%, var(--page)); color: var(--ink-soft); }
+.house-focus-active .plot-row.house-focus-muted:not(:hover, :focus-within) .reign-mark,
+.house-focus-active .vertical-reign.house-focus-muted:not(:hover, :focus-visible) { background: var(--line-strong); }
+.house-focus-active .plot-row.house-focus-muted:not(:hover, :focus-within) .reign-mark.importance-3,
+.house-focus-active .vertical-reign.importance-3.house-focus-muted:not(:hover, :focus-visible) { background: color-mix(in srgb, var(--accent) 40%, var(--page)); }
+.house-focus-active .plot-row.house-focus-muted:not(:hover, :focus-within) .reign-duration,
+.house-focus-active .vertical-reign-duration.house-focus-muted { opacity: 0.2; }
 
 /* Reading guide: one annotated example of the chart. */
 .reading-guide { width: min(1000px, calc(100vw - 32px)); max-width: none; max-height: calc(100dvh - 32px); padding: 0; overflow: auto; overscroll-behavior: contain; border: 1px solid var(--line-strong); border-radius: 0; background: var(--page); color: var(--ink); box-shadow: 0 8px 40px #20282d1a; }

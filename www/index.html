@@ -6,7 +6,7 @@
   <meta name="description" content="Explore European monarchies and their rulers from 27 BCE to 2026.">
   <meta name="theme-color" content="#fffdf9">
   <title>The Braided Crowns of Europe</title>
-  <link rel="icon" href="assets/crown.svg" type="image/svg+xml"><link rel="stylesheet" href="assets/styles.css?v=20261013-nav">
+  <link rel="icon" href="assets/crown.svg" type="image/svg+xml"><link rel="stylesheet" href="assets/styles.css?v=20261014-playhead-focus">
 </head>
 <body>
   <a class="skip-link" href="#search">Skip to the timeline</a>
@@ -60,14 +60,15 @@
         <span>Jump to</span>
         <div id="preset-buttons"></div>
       </div>
+      <p id="house-focus-status" class="house-focus-status" role="status" hidden></p>
 
       <div id="timeline-error" class="error-message" role="alert" hidden></div>
 
       <div class="desktop-timeline" id="desktop-timeline" role="group" aria-label="Horizontal timeline of European monarchies">
         <p class="status-line">Connection symbols sit below a country involved. Hover or focus for the countries and dates; click for details. Click a region heading to fold its rows.</p>
-        <div class="sticky-ruler" aria-hidden="true">
-          <div class="sticky-ruler-label">Year</div>
-          <div class="sticky-ruler-window"><div class="sticky-axis-layer" id="sticky-axis-layer"></div></div>
+        <div class="sticky-ruler">
+          <div class="sticky-ruler-label" aria-hidden="true">Year</div>
+          <div class="sticky-ruler-window"><div class="sticky-axis-layer" id="sticky-axis-layer" aria-hidden="true"></div><div class="ruler-year" id="ruler-year" role="slider" tabindex="0" aria-label="Timeline year" aria-orientation="horizontal"></div></div>
         </div>
         <div class="timeline-grid">
           <div class="label-column" id="label-column"></div>
@@ -77,14 +78,14 @@
               <div class="lane-layer" id="lane-layer"></div>
               <svg class="relationship-layer" id="relationship-layer" aria-hidden="true"></svg>
               <div class="relationship-controls-layer" id="relationship-controls-layer"></div>
-              <div class="crosshair" id="crosshair" aria-hidden="true"><span></span></div>
+              <div class="crosshair" id="crosshair" aria-hidden="true"></div>
             </div>
           </div>
         </div>
       </div>
 
       <div class="mobile-timeline">
-        <p class="status-line">Time runs down the page; swipe sideways for more monarchies. Tap any mark for details.</p>
+        <p class="status-line">Time runs down the page: scroll up or down to change year, or swipe sideways for more monarchies. Tap any mark for details.</p>
         <div class="column-header" id="column-header"><div class="column-header-track" id="column-header-track"></div></div>
         <div class="vertical-scroller" id="vertical-scroller">
           <div class="vertical-chart" id="vertical-chart" role="group" tabindex="-1" aria-label="Vertical timeline of European monarchies, one column per monarchy"></div>
@@ -240,14 +241,16 @@
             <li><span class="guide-number" aria-hidden="true">4</span><p><strong>Dot: one ruler,</strong> placed mid-reign; the thin line spans the reign. Blue, named dots are major rulers. This one is James’s English reign, 1603–1625.</p></li>
             <li><span class="guide-number" aria-hidden="true">5</span><p><i class="legend-marker" aria-hidden="true"><svg viewBox="0 0 16 16" focusable="false"><path d="M8 2.5 13.5 8 8 13.5 2.5 8Z"/></svg></i> <strong>Union, 1603.</strong> James VI of Scotland also became James I of England. One king, two kingdoms: each kept its own parliament and laws, so each keeps its own row and its own dot for him. The second union symbol marks the shared crown restored in 1660.</p></li>
             <li><span class="guide-number" aria-hidden="true">6</span><p><i class="legend-marker" aria-hidden="true"><svg viewBox="0 0 16 16" focusable="false"><path d="M3 8H13M8 3V13"/></svg></i> <strong>State union, 1707.</strong> England and Scotland end and Great Britain begins on a new row. Lines run from each symbol to every kingdom involved.</p></li>
-            <li><span class="guide-number" aria-hidden="true">7</span><p><strong>Blue year line:</strong> the year set by the “Europe in” slider. Dates are whole years. At this boundary both rows include 1707, because the change happened within that year; it does not mean England and Great Britain existed at the same instant.</p></li>
+            <li><span class="guide-number" aria-hidden="true">7</span><p><strong>Blue year line:</strong> the selected year. Dates are whole years. At this boundary both rows include 1707, because the change happened within that year; it does not mean England and Great Britain existed at the same instant.</p></li>
           </ol>
 
           <section class="reading-guide-use" aria-labelledby="reading-guide-use-title">
             <h3 id="reading-guide-use-title">Using the chart</h3>
             <dl>
               <div><dt>Select</dt><dd>Click or tap any bar, band, dot or symbol for its dates, details and sources. With a mouse or keyboard, hover over or focus a symbol for a quick summary.</dd></div>
-              <div><dt>On a phone</dt><dd>Time runs down the page and each monarchy is a column. Swipe sideways for more.</dd></div>
+              <div><dt>Houses</dt><dd>Click or tap a coloured house band to highlight every monarchy that house rules in the “Europe in” year; the others fade but stay usable. A new selection moves the year to the period’s start if needed. Change the year and the highlight follows. Click the band again, click an empty part of the chart, or press Escape to clear it. Selecting a ruler from another house also clears it; a ruler from the selected house keeps it.</dd></div>
+              <div><dt>Year</dt><dd>On the horizontal chart, drag the blue handle on the sticky ruler to change year. An off-center handle follows your pointer until it reaches the middle, then locks there as the chart pans beneath it. At either end, the handle moves toward the edge; drag it back to the middle to lock again. Sideways scrolling and Shift+wheel also change year, centering the playhead where the scroll limits allow. The horizontal scrollbar selects the year at the viewport center. Arrow keys, Home and End also work when focused.</dd></div>
+              <div><dt>On a phone</dt><dd>Time runs down the page and each monarchy is a column. Scroll up or down to change year: the horizontal blue line stays centered and the house highlights follow. At the date-range boundaries, the line moves away from the center. Swipe sideways to browse countries without changing year.</dd></div>
               <div><dt>Lines</dt><dd>Dashed: a shared ruler or looser union, sometimes interrupted. Solid: a state union, continuity or reorganization. Dotted: a division, conquest or end. Dash-dot: a restoration.</dd></div>
             </dl>
             <h3>Other symbols</h3>
@@ -274,6 +277,6 @@
   <noscript><p class="error-message">Enable JavaScript to explore the timeline. The methodology, essay and data-quality report are available without it.</p></noscript>
   <script src="assets/timeline-core.js?v=20260905e" defer></script>
   <script src="data/timeline-data.js?v=20260930h" defer></script>
-  <script src="assets/app.js?v=20261013-nav" defer></script>
+  <script src="assets/app.js?v=20261014-catchup-selection" defer></script>
 </body>
 </html>
