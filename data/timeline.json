@@ -874,6 +874,54 @@
       "type": "reference"
     },
     {
+      "id": "src-wiki-18835362",
+      "title": "Edward VIII — Wikipedia, reviewed 17 October 2026",
+      "url": "https://en.wikipedia.org/wiki/Edward_VIII?oldid=1380303230",
+      "type": "reference"
+    },
+    {
+      "id": "src-wiki-46755",
+      "title": "George VI — Wikipedia, reviewed 17 October 2026",
+      "url": "https://en.wikipedia.org/wiki/George_VI?oldid=1379807087",
+      "type": "reference"
+    },
+    {
+      "id": "src-wiki-366190",
+      "title": "Duchy of Warsaw — Wikipedia, reviewed 17 October 2026",
+      "url": "https://en.wikipedia.org/wiki/Duchy_of_Warsaw?oldid=1365845288",
+      "type": "reference"
+    },
+    {
+      "id": "src-wiki-375568",
+      "title": "Congress Poland — Wikipedia, reviewed 17 October 2026",
+      "url": "https://en.wikipedia.org/wiki/Congress_Poland?oldid=1379297919",
+      "type": "reference"
+    },
+    {
+      "id": "src-wiki-48464",
+      "title": "Frederick Augustus I of Saxony — Wikipedia, reviewed 17 October 2026",
+      "url": "https://en.wikipedia.org/wiki/Frederick_Augustus_I_of_Saxony?oldid=1369324749",
+      "type": "reference"
+    },
+    {
+      "id": "src-wiki-46641",
+      "title": "Nicholas I of Russia — Wikipedia, reviewed 17 October 2026",
+      "url": "https://en.wikipedia.org/wiki/Nicholas_I_of_Russia?oldid=1375146260",
+      "type": "reference"
+    },
+    {
+      "id": "src-napoleon-duchy-warsaw",
+      "title": "The Duchy of Warsaw (Fondation Napoléon)",
+      "url": "https://www.napoleon.org/en/history-of-the-two-empires/close-up/a-close-up-on-the-duchy-of-warsaw",
+      "type": "specialist_reference"
+    },
+    {
+      "id": "src-agad-congress-kingdom",
+      "title": "Kingdom of Poland, 1815–1832 (Central Archives of Historical Records, Warsaw)",
+      "url": "https://www.agad.gov.pl/kr_pol/kp.html",
+      "type": "official"
+    },
+    {
       "id": "src-wiki-12153654",
       "title": "Elizabeth II — Wikipedia, reviewed 5 September 2026",
       "url": "https://en.wikipedia.org/wiki/Elizabeth_II?oldid=1371980460",
@@ -3964,10 +4012,12 @@
       "region": "Central and Eastern Europe",
       "tier": 1,
       "status": "former",
-      "summary": "The Polish monarchy from the first coronation in 1025. Royal coronations and effective unity lapsed for long periods before the kingdom was durably reunited in 1320; Poland was later joined first personally and then constitutionally with Lithuania.",
+      "summary": "The Polish monarchy from the first coronation in 1025. Royal coronations and effective unity lapsed for long periods before the kingdom was durably reunited in 1320; Poland was later joined first personally and then constitutionally with Lithuania. After the partitions, the lane resumes with the Duchy of Warsaw (1807–1815) and the Congress Kingdom of Poland until the 1832 Organic Statute.",
       "sources": [
         "src-poland",
-        "src-poland-rulers"
+        "src-poland-rulers",
+        "src-wiki-366190",
+        "src-wiki-375568"
       ]
     },
     {
@@ -6002,6 +6052,32 @@
       "citations": [
         {
           "source_id": "src-wiki-26288"
+        }
+      ]
+    },
+    {
+      "id": "poland-duchy-warsaw",
+      "polity_id": "poland",
+      "name": "Duchy of Warsaw",
+      "start": 1807,
+      "end": 1815,
+      "note": "A French client state created after the Treaties of Tilsit. Prussian and Russian troops occupied it from 1813, and the Congress of Vienna divided it in 1815.",
+      "citations": [
+        {
+          "source_id": "src-wiki-366190"
+        }
+      ]
+    },
+    {
+      "id": "poland-congress-kingdom",
+      "polity_id": "poland",
+      "name": "Congress Kingdom of Poland",
+      "start": 1815,
+      "end": 1832,
+      "note": "Created by the Congress of Vienna in personal union with the Russian Empire. This lane ends with the 1832 Organic Statute, which abolished the kingdom's constitution, army and legislative assembly.",
+      "citations": [
+        {
+          "source_id": "src-wiki-375568"
         }
       ]
     },
@@ -8273,6 +8349,30 @@
       "citations": [
         {
           "source_id": "src-wiki-26288"
+        }
+      ]
+    },
+    {
+      "id": "rule-poland-wettin-warsaw",
+      "polity_id": "poland",
+      "house_id": "wettin",
+      "start": 1807,
+      "end": 1815,
+      "citations": [
+        {
+          "source_id": "src-wiki-366190"
+        }
+      ]
+    },
+    {
+      "id": "rule-poland-romanov",
+      "polity_id": "poland",
+      "house_id": "romanov",
+      "start": 1815,
+      "end": 1832,
+      "citations": [
+        {
+          "source_id": "src-wiki-375568"
         }
       ]
     },
@@ -10888,6 +10988,26 @@
       "url": "https://en.wikipedia.org/wiki/George_V"
     },
     {
+      "id": "edward-viii",
+      "name": "Edward VIII",
+      "url": "https://en.wikipedia.org/wiki/Edward_VIII"
+    },
+    {
+      "id": "george-vi",
+      "name": "George VI",
+      "url": "https://en.wikipedia.org/wiki/George_VI"
+    },
+    {
+      "id": "frederick-augustus-i-saxony",
+      "name": "Frederick Augustus I",
+      "url": "https://en.wikipedia.org/wiki/Frederick_Augustus_I_of_Saxony"
+    },
+    {
+      "id": "nicholas-i-russia",
+      "name": "Nicholas I",
+      "url": "https://en.wikipedia.org/wiki/Nicholas_I_of_Russia"
+    },
+    {
       "id": "elizabeth-ii",
       "name": "Elizabeth II",
       "url": "https://en.wikipedia.org/wiki/Elizabeth_II"
@@ -12636,7 +12756,7 @@
       "start": 1917,
       "end": 1936,
       "importance": 2,
-      "label": true,
+      "label": false,
       "citations": [
         {
           "source_id": "src-wiki-46823"
@@ -12646,6 +12766,39 @@
         }
       ],
       "note": "George V reigned continuously from 1910 to 1936. The two segments show the royal house being renamed from Saxe-Coburg and Gotha to Windsor in 1917; they do not represent a new accession."
+    },
+    {
+      "id": "reign-edward-viii",
+      "person_id": "edward-viii",
+      "polity_id": "united-kingdom",
+      "house_id": "windsor",
+      "title": "King of the United Kingdom",
+      "start": 1936,
+      "end": 1936,
+      "importance": 2,
+      "label": true,
+      "citations": [
+        {
+          "source_id": "src-wiki-18835362"
+        }
+      ],
+      "note": "Edward VIII succeeded on 20 January 1936 and abdicated in December 1936."
+    },
+    {
+      "id": "reign-george-vi",
+      "person_id": "george-vi",
+      "polity_id": "united-kingdom",
+      "house_id": "windsor",
+      "title": "King of the United Kingdom",
+      "start": 1936,
+      "end": 1952,
+      "importance": 2,
+      "label": true,
+      "citations": [
+        {
+          "source_id": "src-wiki-46755"
+        }
+      ]
     },
     {
       "id": "reign-elizabeth-ii",
@@ -13693,6 +13846,62 @@
         }
       ],
       "note": "Elected during his father’s lifetime in 1529 and crowned in 1530. This record begins with sole rule in 1548."
+    },
+    {
+      "id": "reign-frederick-augustus-i-warsaw",
+      "person_id": "frederick-augustus-i-saxony",
+      "polity_id": "poland",
+      "house_id": "wettin",
+      "title": "Duke of Warsaw",
+      "start": 1807,
+      "end": 1815,
+      "importance": 2,
+      "label": true,
+      "citations": [
+        {
+          "source_id": "src-wiki-48464"
+        },
+        {
+          "source_id": "src-wiki-366190"
+        }
+      ],
+      "note": "Held the duchy in personal union with the Kingdom of Saxony. The duchy was occupied from 1813 and divided in 1815."
+    },
+    {
+      "id": "reign-alexander-i-poland",
+      "person_id": "alexander-i-russia",
+      "polity_id": "poland",
+      "house_id": "romanov",
+      "title": "King of Poland",
+      "start": 1815,
+      "end": 1825,
+      "importance": 2,
+      "label": true,
+      "citations": [
+        {
+          "source_id": "src-wiki-375568"
+        }
+      ]
+    },
+    {
+      "id": "reign-nicholas-i-poland",
+      "person_id": "nicholas-i-russia",
+      "polity_id": "poland",
+      "house_id": "romanov",
+      "title": "King of Poland",
+      "start": 1825,
+      "end": 1832,
+      "importance": 2,
+      "label": true,
+      "citations": [
+        {
+          "source_id": "src-wiki-46641"
+        },
+        {
+          "source_id": "src-wiki-375568"
+        }
+      ],
+      "note": "Crowned in Warsaw in 1829. The Sejm deposed him in January 1831 during the November Uprising; after its suppression, the 1832 Organic Statute ended the constitutional kingdom. This record ends there, although he kept the royal title until 1855."
     },
     {
       "id": "reign-sigismund-ii-lithuania",
@@ -17361,6 +17570,44 @@
         "src-augustus-ii-nbp",
         "src-saxony-state-history",
         "src-wiki-247725"
+      ]
+    },
+    {
+      "id": "rel-saxony-warsaw",
+      "type": "personal_union",
+      "label": "King of Saxony is Duke of Warsaw",
+      "start": 1807,
+      "end": 1815,
+      "from": [
+        "saxony"
+      ],
+      "to": [
+        "poland"
+      ],
+      "description": "Frederick Augustus I held the Saxon crown and the Duchy of Warsaw as separate offices. The duchy was a French client state; the two states did not merge.",
+      "sources": [
+        "src-wiki-48464",
+        "src-wiki-366190",
+        "src-napoleon-duchy-warsaw"
+      ]
+    },
+    {
+      "id": "rel-russia-congress-poland",
+      "type": "personal_union",
+      "label": "Russian emperor is King of Poland",
+      "start": 1815,
+      "end": 1832,
+      "from": [
+        "russia"
+      ],
+      "to": [
+        "poland"
+      ],
+      "description": "The Congress of Vienna created the Kingdom of Poland in personal union with the Russian Empire. The 1832 Organic Statute replaced the personal union with incorporation into the empire.",
+      "sources": [
+        "src-wiki-375568",
+        "src-wiki-46641",
+        "src-agad-congress-kingdom"
       ]
     },
     {

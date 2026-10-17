@@ -1,22 +1,22 @@
 {
   "snapshot": "2026-09-30",
   "counts": {
-    "sources": 524,
+    "sources": 532,
     "houses": 111,
     "polities": 78,
-    "phases": 149,
-    "rules": 285,
-    "persons": 215,
-    "reigns": 266,
-    "relationships": 73,
+    "phases": 151,
+    "rules": 287,
+    "persons": 219,
+    "reigns": 271,
+    "relationships": 75,
     "events": 38,
     "presets": 7
   },
   "errors": 0,
   "review_items": 0,
   "issues": [],
-  "claims": 700,
-  "claims_with_sources": 700,
+  "claims": 709,
+  "claims_with_sources": 709,
   "claims_with_specialist_sources": 208,
-  "wikipedia_extracts": 324
+  "wikipedia_extracts": 328
 }
